@@ -11,13 +11,15 @@ interface ApiService {
     // ========== AUTENTICACIÓN ==========
 
     @POST("auth/signup")
+    @Headers("Content-Type: application/json")
     suspend fun registro(
-        @Body body: Map<String, String>
+        @Body body: RegistroRequest
     ): Response<AuthResponse>
 
     @POST("auth/login")
+    @Headers("Content-Type: application/json")
     suspend fun login(
-        @Body body: Map<String, String>
+        @Body body: LoginRequest
     ): Response<AuthResponse>
 
     @GET("auth/me")
@@ -33,9 +35,10 @@ interface ApiService {
     ): Response<List<Servicio>>
 
     @POST("servicios")
+    @Headers("Content-Type: application/json")
     suspend fun crearServicio(
         @Header("Authorization") token: String,
-        @Body body: Map<String, Any>
+        @Body body: ServicioRequest
     ): Response<Servicio>
 
     @GET("servicios/{id}")
@@ -45,9 +48,30 @@ interface ApiService {
     ): Response<Servicio>
 
     @PATCH("servicios/{id}")
+    @Headers("Content-Type: application/json")
     suspend fun actualizarServicio(
         @Header("Authorization") token: String,
         @Path("id") id: Int,
         @Body body: Map<String, Any>
     ): Response<Servicio>
 }
+
+// ========== DATA CLASSES PARA REQUESTS ==========
+
+data class RegistroRequest(
+    val email: String,
+    val password: String,
+    val name: String? = null
+)
+
+data class LoginRequest(
+    val email: String,
+    val password: String
+)
+
+data class ServicioRequest(
+    val tipo: String,
+    val descripcion: String,
+    val direccion: String,
+    val estado: String = "pendiente"
+)

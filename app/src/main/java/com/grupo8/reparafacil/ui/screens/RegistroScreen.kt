@@ -31,11 +31,15 @@ fun RegistroScreen(
 
     var passwordVisible by remember { mutableStateOf(false) }
 
-    // Manejar navegación cuando registro es exitoso
+
+// Manejar navegación cuando registro es exitoso
     LaunchedEffect(loginState) {
         if (loginState is UiState.Success) {
-            val usuario = (loginState as UiState.Success).data.user
-            onRegistroExitoso(usuario.rol)
+            val authResponse = (loginState as UiState.Success).data
+            // Safe access: el backend puede no devolver el objeto user en registro
+            val usuario = authResponse.user
+            val rol = usuario?.rol ?: "cliente" // Valor por defecto si user es null
+            onRegistroExitoso(rol)
             authViewModel.resetLoginState()
         }
     }

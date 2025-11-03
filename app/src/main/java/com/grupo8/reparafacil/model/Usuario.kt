@@ -28,7 +28,9 @@ data class RegistroErrores(
 )
 
 // Respuesta del login/registro desde la API
+// Respuesta del login/registro desde la API
 data class AuthResponse(
     val authToken: String,
-    val user: Usuario
+    val user: Usuario?, // <-- SOLUCIÓN 1: Añadir '?' para que 'user' pueda ser nulo
+    val user_id: Int? // <-- SOLUCIÓN 2: Añadir el 'user_id' que SÍ envía el registro
 )

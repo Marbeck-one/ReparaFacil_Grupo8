@@ -32,11 +32,14 @@ fun LoginScreen(
 
     val loginState by authViewModel.loginState.collectAsState()
 
-    // Manejar navegación cuando login es exitoso
+// Manejar navegación cuando login es exitoso
     LaunchedEffect(loginState) {
         if (loginState is UiState.Success) {
-            val usuario = (loginState as UiState.Success).data.user
-            onNavigateToHome(usuario.rol)
+            val authResponse = (loginState as UiState.Success).data
+            // Safe access: usar rol del usuario o valor por defecto
+            val usuario = authResponse.user
+            val rol = usuario?.rol ?: "cliente"
+            onNavigateToHome(rol)
             authViewModel.resetLoginState()
         }
     }

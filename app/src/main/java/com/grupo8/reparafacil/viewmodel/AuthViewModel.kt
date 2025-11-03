@@ -127,8 +127,14 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             result.fold(
                 onSuccess = { authResponse ->
                     _loginState.value = UiState.Success(authResponse)
+                    // Safe access: user puede ser null en registro
                     _usuarioActual.value = authResponse.user
                     _registroState.value = _registroState.value.copy(isLoading = false)
+
+                    // Si el backend no devolvió user, hacer login automático
+                    if (authResponse.user == null) {
+                        login(_registroState.value.email, _registroState.value.password)
+                    }
                 },
                 onFailure = { error ->
                     _loginState.value = UiState.Error(error.message ?: "Error desconocido")
