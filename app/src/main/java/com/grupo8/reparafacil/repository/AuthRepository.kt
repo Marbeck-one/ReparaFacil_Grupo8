@@ -1,22 +1,32 @@
 package com.grupo8.reparafacil.repository
 
 import android.content.Context
-import android.util.Log
 import com.grupo8.reparafacil.data.DataStoreManager
-import com.grupo8.reparafacil.model.AuthResponse
-import com.grupo8.reparafacil.model.Usuario
+import com.grupo8.reparafacil.model.*
+import com.grupo8.reparafacil.network.ApiService
 import com.grupo8.reparafacil.network.LoginRequest
 import com.grupo8.reparafacil.network.RegistroRequest
 import com.grupo8.reparafacil.network.RetrofitClient
 import kotlinx.coroutines.flow.Flow
+import java.io.IOException
 
-class AuthRepository(private val context: Context) {
+/**
+ * Repositorio para manejar la autenticación, perfil de usuario y sesión.
+ * Combina el origen de datos de la API (Retrofit) y local (DataStore).
+ */
+class AuthRepository(
+    internal val context: Context
+) {
+    private val apiService: ApiService = RetrofitClient.apiService
 
-    private val apiService = RetrofitClient.apiService
-    private val TAG = "AuthRepository"
+    // --- MÉTODOS DE API (NETWORK) ---
 
-    // ========== API CALLS ==========
-
+    /**
+     * Registra un usuario.
+     * 1. Llama a /signup para obtener token.
+     * 2. Llama a /me para obtener el objeto Usuario.
+     * 3. Guarda la sesión completa en DataStore.
+     */
     suspend fun registro(
         nombre: String,
         email: String,
@@ -25,143 +35,119 @@ class AuthRepository(private val context: Context) {
         rol: String
     ): Result<AuthResponse> {
         return try {
-            Log.d(TAG, "🔵 REGISTRO - Iniciando para email: $email, rol: $rol")
+            val body = RegistroRequest(email, password, nombre)
+            // Nota: La API no parece usar 'telefono' o 'rol' en el body de registro.
 
-            val body = RegistroRequest(
-                email = email,
-                password = password,
-                name = nombre
-            )
-
-            Log.d(TAG, "🔵 REGISTRO - Body: $body")
+            // 1. Llama a /signup
             val response = apiService.registro(body)
-            Log.d(TAG, "🔵 REGISTRO - Response code: ${response.code()}")
+            if (!response.isSuccessful || response.body() == null) {
+                return Result.failure(IOException("Error en el registro: ${response.message()}"))
+            }
 
-            if (response.isSuccessful && response.body() != null) {
-                val authResponse = response.body()!!
+            val authResponse = response.body()!!
+            val token = authResponse.authToken
 
-                // El backend no devuelve el objeto 'user' completo
-                if (authResponse.user != null) {
-                    Log.d(TAG, "✅ REGISTRO - Usuario completo recibido: ${authResponse.user.name}")
-                    DataStoreManager.guardarSesion(context, authResponse.authToken, authResponse.user)
-                } else {
-                    Log.w(TAG, "⚠️ REGISTRO - Backend no devolvió 'user', solo guardando token")
-                    DataStoreManager.guardarToken(context, authResponse.authToken)
-                }
+            // 2. Llama a /me
+            // (La API de /signup debería devolver el usuario, pero como no lo hace,
+            // llamamos a /me para obtener los datos)
+            val usuarioResult = obtenerPerfilConToken(token)
 
-                Result.success(authResponse)
+            if (usuarioResult.isSuccess) {
+                val usuario = usuarioResult.getOrThrow()
+                // 3. Guarda la sesión completa
+                DataStoreManager.guardarSesion(context, token, usuario)
+                // Devuelve la respuesta original, pero con el 'user' rellenado
+                Result.success(authResponse.copy(user = usuario))
             } else {
-                val errorBody = response.errorBody()?.string() ?: "Error desconocido"
-                Log.e(TAG, "❌ REGISTRO - Error: Code=${response.code()}, Body=$errorBody")
-                Result.failure(Exception("Error en registro: ${response.code()} - $errorBody"))
+                Result.failure(IOException("Registro exitoso, pero falló al obtener el perfil."))
             }
+
         } catch (e: Exception) {
-            Log.e(TAG, "❌ REGISTRO - Excepción: ${e.message}", e)
-            Result.failure(Exception("Error de conexión: ${e.message}"))
-        }
-    }
-
-    suspend fun login(email: String, password: String): Result<AuthResponse> {
-        return try {
-            Log.d(TAG, "🔵 LOGIN - Iniciando para email: $email")
-
-            val body = LoginRequest(
-                email = email,
-                password = password
-            )
-
-            Log.d(TAG, "🔵 LOGIN - Body: $body")
-            val response = apiService.login(body)
-            Log.d(TAG, "🔵 LOGIN - Response code: ${response.code()}")
-
-            if (response.isSuccessful && response.body() != null) {
-                val authResponse = response.body()!!
-
-                // El backend tampoco devuelve 'user' en login
-                if (authResponse.user != null) {
-                    Log.d(TAG, "✅ LOGIN - Exitoso con usuario: ${authResponse.user.name}")
-                    DataStoreManager.guardarSesion(context, authResponse.authToken, authResponse.user)
-                    Result.success(authResponse)
-                } else {
-                    Log.w(TAG, "⚠️ LOGIN - Backend no devolvió 'user', obteniendo con /me")
-
-                    // Guardar el token primero
-                    DataStoreManager.guardarToken(context, authResponse.authToken)
-
-                    // Llamar a /me para obtener el usuario completo
-                    val perfilResult = obtenerPerfil()
-                    perfilResult.fold(
-                        onSuccess = { usuario ->
-                            Log.d(TAG, "✅ LOGIN - Usuario obtenido desde /me: ${usuario.name}")
-                            // Ahora sí guardar la sesión completa
-                            DataStoreManager.guardarSesion(context, authResponse.authToken, usuario)
-                            // Crear un AuthResponse completo para devolver
-                            val authCompleto = AuthResponse(
-                                authToken = authResponse.authToken,
-                                user = usuario,
-                                user_id = authResponse.user_id
-                            )
-                            Result.success(authCompleto)
-                        },
-                        onFailure = { error ->
-                            Log.e(TAG, "❌ LOGIN - Error al obtener perfil: ${error.message}")
-                            Result.failure(error)
-                        }
-                    )
-                }
-            } else {
-                val errorBody = response.errorBody()?.string() ?: "Credenciales incorrectas"
-                Log.e(TAG, "❌ LOGIN - Error: Code=${response.code()}, Body=$errorBody")
-                Result.failure(Exception("Login fallido: ${response.code()} - $errorBody"))
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "❌ LOGIN - Excepción: ${e.message}", e)
-            Result.failure(Exception("Error de conexión: ${e.message}"))
-        }
-    }
-
-    suspend fun obtenerPerfil(): Result<Usuario> {
-        return try {
-            val token = DataStoreManager.obtenerToken(context)
-            if (token.isNullOrEmpty()) {
-                Log.e(TAG, "❌ PERFIL - No hay token guardado")
-                return Result.failure(Exception("No hay sesión activa"))
-            }
-
-            Log.d(TAG, "🔵 PERFIL - Obteniendo perfil con token: ${token.take(20)}...")
-            val response = apiService.obtenerPerfil("Bearer $token")
-            Log.d(TAG, "🔵 PERFIL - Response code: ${response.code()}")
-
-            if (response.isSuccessful && response.body() != null) {
-                Log.d(TAG, "✅ PERFIL - Obtenido exitosamente")
-                Result.success(response.body()!!)
-            } else {
-                val errorMsg = response.errorBody()?.string() ?: "Error al obtener perfil"
-                Log.e(TAG, "❌ PERFIL - Error: $errorMsg")
-                Result.failure(Exception(errorMsg))
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "❌ PERFIL - Exception: ${e.message}", e)
             Result.failure(e)
         }
     }
 
-    // ========== DATASTORE (usando el Manager) ==========
+    /**
+     * Inicia sesión de un usuario.
+     * 1. Llama a /login para obtener token.
+     * 2. Llama a /me para obtener el objeto Usuario.
+     * 3. Guarda la sesión completa en DataStore.
+     */
+    suspend fun login(email: String, password: String): Result<AuthResponse> {
+        return try {
+            val body = LoginRequest(email, password)
 
-    suspend fun guardarAvatarUri(uri: String) {
-        DataStoreManager.guardarAvatarUri(context, uri)
+            // 1. Llama a /login
+            val response = apiService.login(body)
+            if (!response.isSuccessful || response.body() == null) {
+                return Result.failure(IOException("Credenciales incorrectas"))
+            }
+
+            val authResponse = response.body()!!
+            val token = authResponse.authToken
+
+            // 2. Llama a /me
+            val usuarioResult = obtenerPerfilConToken(token)
+
+            if (usuarioResult.isSuccess) {
+                val usuario = usuarioResult.getOrThrow()
+                // 3. Guarda la sesión completa
+                DataStoreManager.guardarSesion(context, token, usuario)
+                // Devuelve la respuesta original, pero con el 'user' rellenado
+                Result.success(authResponse.copy(user = usuario))
+            } else {
+                Result.failure(IOException("Login exitoso, pero falló al obtener el perfil."))
+            }
+
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 
-    fun obtenerAvatarUri(): Flow<String?> {
-        return DataStoreManager.obtenerAvatarUri(context)
+    /**
+     * Obtiene el perfil del usuario (auth/me) desde la API usando el token guardado.
+     */
+    suspend fun obtenerPerfil(): Result<Usuario> {
+        val token = DataStoreManager.obtenerToken(context)
+        if (token == null) {
+            return Result.failure(IOException("No hay token de sesión"))
+        }
+        return obtenerPerfilConToken(token)
+    }
+
+    /**
+     * Función interna para obtener el perfil usando un token específico.
+     * Es reutilizable para login y registro.
+     */
+    private suspend fun obtenerPerfilConToken(token: String): Result<Usuario> {
+        return try {
+            val response = apiService.obtenerPerfil("Bearer $token")
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!)
+            } else {
+                Result.failure(IOException("Error al obtener perfil: ${response.message()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+
+    // --- MÉTODOS DE DATASTORE (LOCAL) ---
+
+    suspend fun cerrarSesion() {
+        DataStoreManager.cerrarSesion(context)
     }
 
     fun obtenerUsuarioGuardado(): Flow<Usuario?> {
         return DataStoreManager.obtenerUsuarioGuardado(context)
     }
 
-    suspend fun cerrarSesion() {
-        Log.d(TAG, "🔴 Cerrando sesión")
-        DataStoreManager.cerrarSesion(context)
+    suspend fun guardarAvatarUri(userId: Int, uri: String) {
+        DataStoreManager.guardarAvatarUri(context, userId, uri)
+    }
+
+    fun obtenerAvatarUri(userId: Int): Flow<String?> {
+        return DataStoreManager.obtenerAvatarUri(context, userId)
     }
 }

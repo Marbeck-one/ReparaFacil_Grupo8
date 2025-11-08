@@ -64,15 +64,13 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         val state = _registroState.value
         var esValido = true
 
-        // Validar nombre
+        // Validaciones (sin cambios)...
         if (state.nombre.isBlank()) {
             _registroErrores.value = _registroErrores.value.copy(
                 nombreError = "El nombre es requerido"
             )
             esValido = false
         }
-
-        // Validar email
         if (state.email.isBlank()) {
             _registroErrores.value = _registroErrores.value.copy(
                 emailError = "El email es requerido"
@@ -84,8 +82,6 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             )
             esValido = false
         }
-
-        // Validar password
         if (state.password.isBlank()) {
             _registroErrores.value = _registroErrores.value.copy(
                 passwordError = "La contraseña es requerida"
@@ -97,8 +93,6 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             )
             esValido = false
         }
-
-        // Validar teléfono
         if (state.telefono.isBlank()) {
             _registroErrores.value = _registroErrores.value.copy(
                 telefonoError = "El teléfono es requerido"
@@ -126,15 +120,18 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
 
             result.fold(
                 onSuccess = { authResponse ->
+                    // --- LÓGICA SIMPLIFICADA ---
+                    // El 'authResponse' ahora SÍ tiene el 'user' gracias al repo
                     _loginState.value = UiState.Success(authResponse)
-                    // Safe access: user puede ser null en registro
                     _usuarioActual.value = authResponse.user
                     _registroState.value = _registroState.value.copy(isLoading = false)
 
-                    // Si el backend no devolvió user, hacer login automático
+                    // --- YA NO SE NECESITA EL LOGIN MANUAL ---
+                    /*
                     if (authResponse.user == null) {
                         login(_registroState.value.email, _registroState.value.password)
                     }
+                    */
                 },
                 onFailure = { error ->
                     _loginState.value = UiState.Error(error.message ?: "Error desconocido")
@@ -150,6 +147,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             _loginState.value = UiState.Loading
 
+            // El repositorio ahora hace todo el trabajo (login + /me + guardar)
             val result = repository.login(email, password)
 
             result.fold(

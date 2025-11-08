@@ -41,6 +41,16 @@ fun PerfilScreen(
     var mostrarDialogoImagen by remember { mutableStateOf(false) }
     var imageUriTemp by remember { mutableStateOf<Uri?>(null) }
 
+    // +++ ESTE ES EL ARREGLO +++
+    // Usamos LaunchedEffect para llamar a cargarPerfil() CADA VEZ
+    // que esta pantalla entre en la composición.
+    // El 'init' del ViewModel solo se ejecuta una vez, pero esto
+    // se ejecutará cada vez que navegues aquí.
+    LaunchedEffect(Unit) {
+        perfilViewModel.cargarPerfil()
+    }
+    // +++++++++++++++++++++++++++
+
     // Permiso de cámara
     val cameraPermission = rememberPermissionState(Manifest.permission.CAMERA)
 
@@ -155,6 +165,8 @@ fun PerfilScreen(
                     contentAlignment = Alignment.BottomEnd
                 ) {
                     ImagenInteligente(
+                        // Usamos la imagen del estado del VM, que ahora sí
+                        // se habrá cargado (o borrado) correctamente.
                         imagenUri = imagenUri,
                         size = 150.dp
                     )
@@ -197,7 +209,9 @@ fun PerfilScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
-                                text = usuarioActual?.name ?: perfilState.usuario?.name ?: "---",
+                                // Ahora usamos el usuario del PerfilState,
+                                // que se habrá recargado.
+                                text = perfilState.usuario?.name ?: "---",
                                 style = MaterialTheme.typography.bodyLarge
                             )
                         }
@@ -215,7 +229,7 @@ fun PerfilScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
-                                text = usuarioActual?.email ?: perfilState.usuario?.email ?: "---",
+                                text = perfilState.usuario?.email ?: "---",
                                 style = MaterialTheme.typography.bodyLarge
                             )
                         }
@@ -233,7 +247,7 @@ fun PerfilScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
-                                text = usuarioActual?.telefono ?: perfilState.usuario?.telefono ?: "---",
+                                text = perfilState.usuario?.telefono ?: "---",
                                 style = MaterialTheme.typography.bodyLarge
                             )
                         }
@@ -253,7 +267,7 @@ fun PerfilScreen(
                             Chip(
                                 label = {
                                     Text(
-                                        text = (usuarioActual?.rol ?: perfilState.usuario?.rol ?: "---").uppercase()
+                                        text = (perfilState.usuario?.rol ?: "---").uppercase()
                                     )
                                 }
                             )
@@ -283,6 +297,7 @@ fun PerfilScreen(
     }
 }
 
+// (La función Chip se queda igual)
 @Composable
 fun Chip(
     label: @Composable () -> Unit,

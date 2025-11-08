@@ -20,14 +20,21 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
  */
 object DataStoreManager {
 
-    // Keys para DataStore
+    // Keys para DataStore (Sesión)
     private val TOKEN_KEY = stringPreferencesKey("auth_token")
     private val USER_ID_KEY = stringPreferencesKey("user_id")
     private val USER_EMAIL_KEY = stringPreferencesKey("user_email")
     private val USER_NAME_KEY = stringPreferencesKey("user_name")
     private val USER_ROL_KEY = stringPreferencesKey("user_rol")
     private val USER_TELEFONO_KEY = stringPreferencesKey("user_telefono")
-    private val AVATAR_URI_KEY = stringPreferencesKey("avatar_uri")
+
+    // --- ELIMINAMOS ESTA LÍNEA ---
+    // private val AVATAR_URI_KEY = stringPreferencesKey("avatar_uri")
+
+    // +++ AÑADIMOS ESTA FUNCIÓN +++
+    // Helper para crear una clave de avatar única por usuario
+    private fun getAvatarKey(userId: Int) = stringPreferencesKey("avatar_uri_$userId")
+
 
     // ========== GUARDAR DATOS ==========
 
@@ -48,9 +55,12 @@ object DataStoreManager {
         }
     }
 
-    suspend fun guardarAvatarUri(context: Context, uri: String) {
+    // +++ MODIFICAMOS LA FIRMA Y LÓGICA +++
+    // Ahora acepta un userId para saber a quién pertenece la URI
+    suspend fun guardarAvatarUri(context: Context, userId: Int, uri: String) {
+        val key = getAvatarKey(userId)
         context.dataStore.edit { preferences ->
-            preferences[AVATAR_URI_KEY] = uri
+            preferences[key] = uri
         }
     }
 
@@ -90,17 +100,30 @@ object DataStoreManager {
         }
     }
 
-    fun obtenerAvatarUri(context: Context): Flow<String?> {
+    // +++ MODIFICAMOS LA FIRMA Y LÓGICA +++
+    // Ahora acepta un userId para obtener la URI correcta
+    fun obtenerAvatarUri(context: Context, userId: Int): Flow<String?> {
+        val key = getAvatarKey(userId)
         return context.dataStore.data.map { preferences ->
-            preferences[AVATAR_URI_KEY]
+            preferences[key]
         }
     }
 
     // ========== LIMPIAR DATOS ==========
 
+    // +++ MODIFICAMOS LA LÓGICA +++
+    // Ya no usamos preferences.clear()
+    // Borramos solo los datos de la sesión activa
     suspend fun cerrarSesion(context: Context) {
         context.dataStore.edit { preferences ->
-            preferences.clear()
+            preferences.remove(TOKEN_KEY)
+            preferences.remove(USER_ID_KEY)
+            preferences.remove(USER_EMAIL_KEY)
+            preferences.remove(USER_NAME_KEY)
+            preferences.remove(USER_ROL_KEY)
+            preferences.remove(USER_TELEFONO_KEY)
+
+            // Las claves "avatar_uri_X" se quedan guardadas
         }
     }
 }

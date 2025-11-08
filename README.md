@@ -65,9 +65,9 @@ app/src/main/java/com/grupo8/reparafacil/
 - Feedback visual de errores bajo cada campo
 
 ### Persistencia Local
-- **DataStore:** Token, usuario, teléfono, rol
-- **Imagen de perfil:** URI guardada localmente, persiste entre reinicios
-- **Cerrar sesión:** Limpia todos los datos
+- **DataStore:** Token de sesión y datos de usuario.
+- **Imagen de perfil:** URI guardada localmente por ID de usuario, persiste entre sesiones.
+- **Cerrar sesión:** Limpia solo los datos de la sesión activa, preservando datos de perfiles (fotos).
 
 ### Recursos Nativos
 - **Cámara:** Capturar foto de perfil
