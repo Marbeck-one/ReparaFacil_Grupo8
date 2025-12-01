@@ -32,13 +32,13 @@ data class RegistroRequest(
 
 interface ApiService {
 
-    @POST("auth/login")
+    @POST("/api/auth/login")
     suspend fun login(@Body request: LoginRequest): Response<AuthResponse>
 
-    @POST("auth/signup")
+    @POST("/api/auth/signup")
     suspend fun registro(@Body request: RegistroRequest): Response<AuthResponse>
 
-    @GET("auth/me")
+    @GET("/api/auth/me")
     suspend fun obtenerPerfil(@Header("Authorization") token: String): Response<Usuario>
 
     companion object {
