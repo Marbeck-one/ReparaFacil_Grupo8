@@ -2,41 +2,69 @@ package com.grupo8.reparafacil.repository
 
 import android.content.Context
 import com.grupo8.reparafacil.data.DataStoreManager
-import com.grupo8.reparafacil.model.*
+import com.grupo8.reparafacil.model.AuthResponse
+import com.grupo8.reparafacil.model.Usuario
 import com.grupo8.reparafacil.network.ApiService
 import com.grupo8.reparafacil.network.LoginRequest
 import com.grupo8.reparafacil.network.RegistroRequest
-import com.grupo8.reparafacil.network.RetrofitClient
 import kotlinx.coroutines.flow.Flow
 import java.io.IOException
 
-/**
- * Repositorio para manejar la autenticación, perfil de usuario y sesión.
- * Combina el origen de datos de la API (Retrofit) y local (DataStore).
- */
-class AuthRepository(
-    internal val context: Context
-) {
-    private val apiService: ApiService = RetrofitClient.apiService
+class AuthRepository(private val context: Context) {
 
-    // --- MÉTODOS DE API (NETWORK) ---
+    private val apiService = ApiService.create()
 
-    /**
-     * Registra un usuario.
-     * 1. Llama a /signup para obtener token.
-     * 2. Llama a /me para obtener el objeto Usuario.
-     * 3. Guarda la sesión completa en DataStore.
-     */
+    // ========== LOGIN ==========
+    suspend fun login(email: String, password: String): Result<AuthResponse> {
+        return try {
+            val body = LoginRequest(email = email, password = password)
+            val response = apiService.login(body)
+
+            if (response.isSuccessful && response.body() != null) {
+                val authResponse = response.body()!!
+                val token = authResponse.authToken
+
+                // Obtener perfil completo del usuario
+                val usuarioResult = obtenerPerfilConToken(token)
+
+                if (usuarioResult.isSuccess) {
+                    val usuario = usuarioResult.getOrThrow()
+                    // Guardar sesión completa
+                    DataStoreManager.guardarSesion(context, token, usuario)
+                    Result.success(authResponse.copy(user = usuario))
+                } else {
+                    Result.failure(IOException("Login exitoso, pero falló al obtener el perfil."))
+                }
+            } else {
+                Result.failure(IOException("Error en el login: ${response.message()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    // ========== REGISTRO ==========
     suspend fun registro(
         nombre: String,
         email: String,
         password: String,
         telefono: String,
-        rol: String
+        rol: String,
+        direccion: String? = null,
+        especialidad: String? = null,
+        certificaciones: List<String>? = null
     ): Result<AuthResponse> {
         return try {
-            val body = RegistroRequest(email, password, nombre)
-            // Nota: La API no parece usar 'telefono' o 'rol' en el body de registro.
+            val body = RegistroRequest(
+                email = email,
+                password = password,
+                nombre = nombre,
+                telefono = telefono,
+                rol = rol,
+                direccion = direccion,
+                especialidad = especialidad,
+                certificaciones = certificaciones
+            )
 
             // 1. Llama a /signup
             val response = apiService.registro(body)
@@ -47,16 +75,13 @@ class AuthRepository(
             val authResponse = response.body()!!
             val token = authResponse.authToken
 
-            // 2. Llama a /me
-            // (La API de /signup debería devolver el usuario, pero como no lo hace,
-            // llamamos a /me para obtener los datos)
+            // 2. Llama a /me para obtener el perfil completo
             val usuarioResult = obtenerPerfilConToken(token)
 
             if (usuarioResult.isSuccess) {
                 val usuario = usuarioResult.getOrThrow()
                 // 3. Guarda la sesión completa
                 DataStoreManager.guardarSesion(context, token, usuario)
-                // Devuelve la respuesta original, pero con el 'user' rellenado
                 Result.success(authResponse.copy(user = usuario))
             } else {
                 Result.failure(IOException("Registro exitoso, pero falló al obtener el perfil."))
@@ -67,58 +92,7 @@ class AuthRepository(
         }
     }
 
-    /**
-     * Inicia sesión de un usuario.
-     * 1. Llama a /login para obtener token.
-     * 2. Llama a /me para obtener el objeto Usuario.
-     * 3. Guarda la sesión completa en DataStore.
-     */
-    suspend fun login(email: String, password: String): Result<AuthResponse> {
-        return try {
-            val body = LoginRequest(email, password)
-
-            // 1. Llama a /login
-            val response = apiService.login(body)
-            if (!response.isSuccessful || response.body() == null) {
-                return Result.failure(IOException("Credenciales incorrectas"))
-            }
-
-            val authResponse = response.body()!!
-            val token = authResponse.authToken
-
-            // 2. Llama a /me
-            val usuarioResult = obtenerPerfilConToken(token)
-
-            if (usuarioResult.isSuccess) {
-                val usuario = usuarioResult.getOrThrow()
-                // 3. Guarda la sesión completa
-                DataStoreManager.guardarSesion(context, token, usuario)
-                // Devuelve la respuesta original, pero con el 'user' rellenado
-                Result.success(authResponse.copy(user = usuario))
-            } else {
-                Result.failure(IOException("Login exitoso, pero falló al obtener el perfil."))
-            }
-
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-
-    /**
-     * Obtiene el perfil del usuario (auth/me) desde la API usando el token guardado.
-     */
-    suspend fun obtenerPerfil(): Result<Usuario> {
-        val token = DataStoreManager.obtenerToken(context)
-        if (token == null) {
-            return Result.failure(IOException("No hay token de sesión"))
-        }
-        return obtenerPerfilConToken(token)
-    }
-
-    /**
-     * Función interna para obtener el perfil usando un token específico.
-     * Es reutilizable para login y registro.
-     */
+    // ========== OBTENER PERFIL CON TOKEN ==========
     private suspend fun obtenerPerfilConToken(token: String): Result<Usuario> {
         return try {
             val response = apiService.obtenerPerfil("Bearer $token")
@@ -132,22 +106,18 @@ class AuthRepository(
         }
     }
 
-
-    // --- MÉTODOS DE DATASTORE (LOCAL) ---
-
-    suspend fun cerrarSesion() {
-        DataStoreManager.cerrarSesion(context)
-    }
-
+    // ========== OBTENER USUARIO GUARDADO ==========
     fun obtenerUsuarioGuardado(): Flow<Usuario?> {
-        return DataStoreManager.obtenerUsuarioGuardado(context)
+        return DataStoreManager.obtenerUsuario(context)
     }
 
-    suspend fun guardarAvatarUri(userId: Int, uri: String) {
-        DataStoreManager.guardarAvatarUri(context, userId, uri)
+    // ========== OBTENER TOKEN GUARDADO ==========
+    fun obtenerTokenGuardado(): Flow<String?> {
+        return DataStoreManager.obtenerToken(context)
     }
 
-    fun obtenerAvatarUri(userId: Int): Flow<String?> {
-        return DataStoreManager.obtenerAvatarUri(context, userId)
+    // ========== CERRAR SESIÓN ==========
+    suspend fun cerrarSesion() {
+        DataStoreManager.limpiarSesion(context)
     }
 }

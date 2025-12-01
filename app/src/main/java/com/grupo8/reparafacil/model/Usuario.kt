@@ -1,36 +1,54 @@
 package com.grupo8.reparafacil.model
 
+import com.google.gson.annotations.SerializedName
+
+// ========== MODELO USUARIO ==========
 data class Usuario(
-    val id: Int = 0,
+    @SerializedName("_id") val id: String = "",
+    val nombre: String = "",
     val email: String = "",
-    val name: String = "",
-    val rol: String = "", // "cliente" o "tecnico"
-    val telefono: String = "",
-    val avatarUrl: String? = null
+    val telefono: String? = null,
+    val rol: String = "",
+    val direccion: String? = null,
+    val especialidad: String? = null,
+    val certificaciones: List<String>? = null,
+    val fotoPerfil: String? = null,
+    val activo: Boolean = true,
+    val createdAt: String? = null,
+    val updatedAt: String? = null
 )
 
-// Estado de UI para el formulario de registro
+// ========== RESPUESTA DE AUTENTICACIÓN ==========
+data class AuthResponse(
+    @SerializedName("authToken") val authToken: String = "",
+    @SerializedName("user") val user: Usuario? = null
+)
+
+// ========== ESTADO UI ==========
+sealed class UiState<out T> {
+    object Idle : UiState<Nothing>()
+    object Loading : UiState<Nothing>()
+    data class Success<T>(val data: T) : UiState<T>()
+    data class Error(val message: String) : UiState<Nothing>()
+}
+
+// ========== ESTADO UI PARA REGISTRO ==========
 data class RegistroUiState(
     val nombre: String = "",
     val email: String = "",
     val password: String = "",
     val telefono: String = "",
-    val rol: String = "cliente", // por defecto cliente
+    val rol: String = "cliente",
+    val direccion: String = "",
+    val especialidad: String = "",
     val isLoading: Boolean = false
 )
 
-// Errores de validación
+// ========== ERRORES DE VALIDACIÓN ==========
 data class RegistroErrores(
     val nombreError: String? = null,
     val emailError: String? = null,
     val passwordError: String? = null,
-    val telefonoError: String? = null
-)
-
-// Respuesta del login/registro desde la API
-// Respuesta del login/registro desde la API
-data class AuthResponse(
-    val authToken: String,
-    val user: Usuario?, // <-- SOLUCIÓN 1: Añadir '?' para que 'user' pueda ser nulo
-    val user_id: Int? // <-- SOLUCIÓN 2: Añadir el 'user_id' que SÍ envía el registro
+    val telefonoError: String? = null,
+    val especialidadError: String? = null
 )

@@ -42,7 +42,7 @@ fun HomeTecnicoScreen(
                     Column {
                         Text("ReparaFácil - Técnico")
                         Text(
-                            text = "Hola, ${usuarioActual?.name ?: "Técnico"}",
+                            text = "Hola, ${usuarioActual?.nombre ?: "Técnico"}",
                             style = MaterialTheme.typography.bodySmall
                         )
                     }

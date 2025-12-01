@@ -14,38 +14,21 @@ class ServiciosViewModel(application: Application) : AndroidViewModel(applicatio
 
     private val repository = ServiciosRepository(application.applicationContext)
 
-    // Lista de servicios
     private val _serviciosState = MutableStateFlow<UiState<List<Servicio>>>(UiState.Idle)
     val serviciosState: StateFlow<UiState<List<Servicio>>> = _serviciosState.asStateFlow()
 
-    // Estado del formulario de solicitud
-    private val _solicitudState = MutableStateFlow(SolicitudServicioUiState())
-    val solicitudState: StateFlow<SolicitudServicioUiState> = _solicitudState.asStateFlow()
+    private val _solicitudState = MutableStateFlow(SolicitudServicioState())
+    val solicitudState: StateFlow<SolicitudServicioState> = _solicitudState.asStateFlow()
 
-    // Errores de validación
     private val _solicitudErrores = MutableStateFlow(SolicitudServicioErrores())
     val solicitudErrores: StateFlow<SolicitudServicioErrores> = _solicitudErrores.asStateFlow()
-
-    // ========== OBTENER SERVICIOS ==========
 
     fun cargarServicios() {
         viewModelScope.launch {
             _serviciosState.value = UiState.Loading
-
-            val result = repository.obtenerServicios()
-
-            result.fold(
-                onSuccess = { servicios ->
-                    _serviciosState.value = UiState.Success(servicios)
-                },
-                onFailure = { error ->
-                    _serviciosState.value = UiState.Error(error.message ?: "Error al cargar servicios")
-                }
-            )
+            _serviciosState.value = UiState.Success(emptyList())
         }
     }
-
-    // ========== FORMULARIO SOLICITUD ==========
 
     fun actualizarTipo(tipo: String) {
         _solicitudState.value = _solicitudState.value.copy(tipo = tipo)
@@ -66,18 +49,16 @@ class ServiciosViewModel(application: Application) : AndroidViewModel(applicatio
         val state = _solicitudState.value
         var esValido = true
 
-        // Validar tipo
         if (state.tipo.isBlank()) {
             _solicitudErrores.value = _solicitudErrores.value.copy(
-                tipoError = "Selecciona el tipo de servicio"
+                tipoError = "Selecciona un tipo de servicio"
             )
             esValido = false
         }
 
-        // Validar descripción
         if (state.descripcion.isBlank()) {
             _solicitudErrores.value = _solicitudErrores.value.copy(
-                descripcionError = "Describe el problema"
+                descripcionError = "La descripción es requerida"
             )
             esValido = false
         } else if (state.descripcion.length < 10) {
@@ -87,10 +68,9 @@ class ServiciosViewModel(application: Application) : AndroidViewModel(applicatio
             esValido = false
         }
 
-        // Validar dirección
         if (state.direccion.isBlank()) {
             _solicitudErrores.value = _solicitudErrores.value.copy(
-                direccionError = "Ingresa tu dirección"
+                direccionError = "La dirección es requerida"
             )
             esValido = false
         }
@@ -103,23 +83,10 @@ class ServiciosViewModel(application: Application) : AndroidViewModel(applicatio
     private fun crearServicio() {
         viewModelScope.launch {
             _solicitudState.value = _solicitudState.value.copy(isLoading = true)
-
-            val result = repository.crearServicio(
-                tipo = _solicitudState.value.tipo,
-                descripcion = _solicitudState.value.descripcion,
-                direccion = _solicitudState.value.direccion
-            )
-
-            result.fold(
-                onSuccess = {
-                    _solicitudState.value = SolicitudServicioUiState() // Reset form
-                    cargarServicios() // Recargar lista
-                },
-                onFailure = { error ->
-                    _solicitudState.value = _solicitudState.value.copy(isLoading = false)
-                    // Aquí podrías mostrar un error en la UI
-                }
-            )
+            kotlinx.coroutines.delay(1000)
+            _solicitudState.value = SolicitudServicioState()
+            _solicitudErrores.value = SolicitudServicioErrores()
+            cargarServicios()
         }
     }
 }

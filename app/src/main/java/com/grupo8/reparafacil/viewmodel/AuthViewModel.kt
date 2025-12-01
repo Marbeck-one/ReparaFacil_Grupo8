@@ -60,17 +60,28 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         _registroState.value = _registroState.value.copy(rol = rol)
     }
 
+    fun actualizarEspecialidad(especialidad: String) {
+        _registroState.value = _registroState.value.copy(especialidad = especialidad)
+        _registroErrores.value = _registroErrores.value.copy(especialidadError = null)
+    }
+
+    fun actualizarDireccion(direccion: String) {
+        _registroState.value = _registroState.value.copy(direccion = direccion)
+    }
+
     fun validarYRegistrar() {
         val state = _registroState.value
         var esValido = true
 
-        // Validaciones (sin cambios)...
+        // Validar nombre
         if (state.nombre.isBlank()) {
             _registroErrores.value = _registroErrores.value.copy(
                 nombreError = "El nombre es requerido"
             )
             esValido = false
         }
+
+        // Validar email
         if (state.email.isBlank()) {
             _registroErrores.value = _registroErrores.value.copy(
                 emailError = "El email es requerido"
@@ -82,6 +93,8 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             )
             esValido = false
         }
+
+        // Validar password
         if (state.password.isBlank()) {
             _registroErrores.value = _registroErrores.value.copy(
                 passwordError = "La contraseña es requerida"
@@ -93,9 +106,19 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             )
             esValido = false
         }
+
+        // Validar teléfono
         if (state.telefono.isBlank()) {
             _registroErrores.value = _registroErrores.value.copy(
                 telefonoError = "El teléfono es requerido"
+            )
+            esValido = false
+        }
+
+        // Validar especialidad para técnicos
+        if (state.rol == "tecnico" && state.especialidad.isBlank()) {
+            _registroErrores.value = _registroErrores.value.copy(
+                especialidadError = "La especialidad es requerida para técnicos"
             )
             esValido = false
         }
@@ -115,23 +138,17 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                 email = _registroState.value.email,
                 password = _registroState.value.password,
                 telefono = _registroState.value.telefono,
-                rol = _registroState.value.rol
+                rol = _registroState.value.rol,
+                direccion = _registroState.value.direccion,
+                especialidad = if (_registroState.value.rol == "tecnico") _registroState.value.especialidad else null,
+                certificaciones = null
             )
 
             result.fold(
                 onSuccess = { authResponse ->
-                    // --- LÓGICA SIMPLIFICADA ---
-                    // El 'authResponse' ahora SÍ tiene el 'user' gracias al repo
                     _loginState.value = UiState.Success(authResponse)
                     _usuarioActual.value = authResponse.user
                     _registroState.value = _registroState.value.copy(isLoading = false)
-
-                    // --- YA NO SE NECESITA EL LOGIN MANUAL ---
-                    /*
-                    if (authResponse.user == null) {
-                        login(_registroState.value.email, _registroState.value.password)
-                    }
-                    */
                 },
                 onFailure = { error ->
                     _loginState.value = UiState.Error(error.message ?: "Error desconocido")
@@ -147,7 +164,6 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             _loginState.value = UiState.Loading
 
-            // El repositorio ahora hace todo el trabajo (login + /me + guardar)
             val result = repository.login(email, password)
 
             result.fold(

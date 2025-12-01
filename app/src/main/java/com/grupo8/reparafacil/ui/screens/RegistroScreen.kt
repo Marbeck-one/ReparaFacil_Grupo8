@@ -1,6 +1,7 @@
 package com.grupo8.reparafacil.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
@@ -14,16 +15,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.grupo8.reparafacil.model.UiState
 import com.grupo8.reparafacil.viewmodel.AuthViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegistroScreen(
-    authViewModel: AuthViewModel,
-    onNavigateBack: () -> Unit,
-    onRegistroExitoso: (String) -> Unit
+    onNavigateToLogin: () -> Unit,
+    onRegistroExitoso: () -> Unit,
+    authViewModel: AuthViewModel = viewModel()
 ) {
     val registroState by authViewModel.registroState.collectAsState()
     val registroErrores by authViewModel.registroErrores.collectAsState()
@@ -31,15 +34,10 @@ fun RegistroScreen(
 
     var passwordVisible by remember { mutableStateOf(false) }
 
-
-// Manejar navegación cuando registro es exitoso
+    // Observar estado del login para navegar
     LaunchedEffect(loginState) {
         if (loginState is UiState.Success) {
-            val authResponse = (loginState as UiState.Success).data
-            // Safe access: el backend puede no devolver el objeto user en registro
-            val usuario = authResponse.user
-            val rol = usuario?.rol ?: "cliente" // Valor por defecto si user es null
-            onRegistroExitoso(rol)
+            onRegistroExitoso()
             authViewModel.resetLoginState()
         }
     }
@@ -49,15 +47,10 @@ fun RegistroScreen(
             TopAppBar(
                 title = { Text("Crear Cuenta") },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
+                    IconButton(onClick = onNavigateToLogin) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
-                )
+                }
             )
         }
     ) { paddingValues ->
@@ -65,17 +58,29 @@ fun RegistroScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(24.dp)
+                .padding(horizontal = 24.dp)
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Título
             Text(
-                text = "Únete a ReparaFácil",
-                style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.primary
+                text = "¡Bienvenido a ReparaFácil!",
+                style = MaterialTheme.typography.headlineMedium,
+                textAlign = TextAlign.Center
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = "Completa tus datos para registrarte",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(32.dp))
 
             // Campo Nombre
             OutlinedTextField(
@@ -106,13 +111,13 @@ fun RegistroScreen(
                 leadingIcon = {
                     Icon(Icons.Default.Email, contentDescription = "Email")
                 },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                 isError = registroErrores.emailError != null,
                 supportingText = {
                     if (registroErrores.emailError != null) {
                         Text(registroErrores.emailError!!)
                     }
                 },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !registroState.isLoading
@@ -120,7 +125,7 @@ fun RegistroScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Campo Contraseña
+            // Campo Password
             OutlinedTextField(
                 value = registroState.password,
                 onValueChange = { authViewModel.actualizarPassword(it) },
@@ -131,21 +136,19 @@ fun RegistroScreen(
                 trailingIcon = {
                     IconButton(onClick = { passwordVisible = !passwordVisible }) {
                         Icon(
-                            imageVector = if (passwordVisible) Icons.Default.Visibility
-                            else Icons.Default.VisibilityOff,
-                            contentDescription = if (passwordVisible) "Ocultar" else "Mostrar"
+                            imageVector = if (passwordVisible) Icons.Default.Settings else Icons.Default.Lock,
+                            contentDescription = if (passwordVisible) "Ocultar contraseña" else "Mostrar contraseña"
                         )
                     }
                 },
-                visualTransformation = if (passwordVisible) VisualTransformation.None
-                else PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 isError = registroErrores.passwordError != null,
                 supportingText = {
                     if (registroErrores.passwordError != null) {
                         Text(registroErrores.passwordError!!)
                     }
                 },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !registroState.isLoading
@@ -161,32 +164,60 @@ fun RegistroScreen(
                 leadingIcon = {
                     Icon(Icons.Default.Phone, contentDescription = "Teléfono")
                 },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                 isError = registroErrores.telefonoError != null,
                 supportingText = {
                     if (registroErrores.telefonoError != null) {
                         Text(registroErrores.telefonoError!!)
                     }
                 },
+                placeholder = { Text("+56912345678") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !registroState.isLoading
             )
 
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Campo Especialidad (solo visible para técnicos)
+            AnimatedVisibility(visible = registroState.rol == "tecnico") {
+                Column {
+                    OutlinedTextField(
+                        value = registroState.especialidad,
+                        onValueChange = { authViewModel.actualizarEspecialidad(it) },
+                        label = { Text("Especialidad") },
+                        leadingIcon = {
+                            Icon(Icons.Default.Build, contentDescription = "Especialidad")
+                        },
+                        isError = registroErrores.especialidadError != null,
+                        supportingText = {
+                            if (registroErrores.especialidadError != null) {
+                                Text(registroErrores.especialidadError!!)
+                            }
+                        },
+                        placeholder = { Text("Ej: Reparación de PCs, Plomería, etc.") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !registroState.isLoading
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
+            }
+
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Selección de Rol
+            // Selector de Rol
             Text(
                 text = "Tipo de cuenta",
-                style = MaterialTheme.typography.titleSmall,
-                modifier = Modifier.align(Alignment.Start)
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.fillMaxWidth()
             )
 
             Spacer(modifier = Modifier.height(8.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 // Botón Cliente
                 FilterChip(
@@ -194,7 +225,11 @@ fun RegistroScreen(
                     onClick = { authViewModel.actualizarRol("cliente") },
                     label = { Text("Cliente") },
                     leadingIcon = {
-                        Icon(Icons.Default.Person, contentDescription = "Cliente")
+                        if (registroState.rol == "cliente") {
+                            Icon(Icons.Default.CheckCircle, contentDescription = null)
+                        } else {
+                            Icon(Icons.Default.Person, contentDescription = null)
+                        }
                     },
                     modifier = Modifier.weight(1f),
                     enabled = !registroState.isLoading
@@ -206,7 +241,11 @@ fun RegistroScreen(
                     onClick = { authViewModel.actualizarRol("tecnico") },
                     label = { Text("Técnico") },
                     leadingIcon = {
-                        Icon(Icons.Default.Build, contentDescription = "Técnico")
+                        if (registroState.rol == "tecnico") {
+                            Icon(Icons.Default.CheckCircle, contentDescription = null)
+                        } else {
+                            Icon(Icons.Default.Build, contentDescription = null)
+                        }
                     },
                     modifier = Modifier.weight(1f),
                     enabled = !registroState.isLoading
@@ -215,26 +254,8 @@ fun RegistroScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Botón Registrar
-            Button(
-                onClick = { authViewModel.validarYRegistrar() },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !registroState.isLoading
-            ) {
-                if (registroState.isLoading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
-                } else {
-                    Text("Crear Cuenta")
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Mensaje de error
-            AnimatedVisibility(visible = loginState is UiState.Error) {
+            // Mostrar error si existe
+            if (loginState is UiState.Error) {
                 Card(
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.errorContainer
@@ -242,12 +263,48 @@ fun RegistroScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        text = (loginState as? UiState.Error)?.message ?: "",
-                        modifier = Modifier.padding(12.dp),
-                        color = MaterialTheme.colorScheme.onErrorContainer
+                        text = (loginState as UiState.Error).message,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.padding(16.dp)
                     )
                 }
+                Spacer(modifier = Modifier.height(16.dp))
             }
+
+            // Botón Registrarse
+            Button(
+                onClick = { authViewModel.validarYRegistrar() },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp),
+                enabled = !registroState.isLoading
+            ) {
+                if (registroState.isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                } else {
+                    Text("Registrarse")
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Link para ir a Login
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Text("¿Ya tienes cuenta? ")
+                Text(
+                    text = "Inicia sesión",
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.clickable(onClick = onNavigateToLogin)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }

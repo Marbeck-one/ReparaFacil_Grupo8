@@ -4,9 +4,10 @@ import android.Manifest
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -14,10 +15,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
-import com.grupo8.reparafacil.ui.components.ImagenInteligente
+import coil.compose.AsyncImage
 import com.grupo8.reparafacil.ui.components.LoadingScreen
 import com.grupo8.reparafacil.viewmodel.AuthViewModel
 import com.grupo8.reparafacil.viewmodel.PerfilViewModel
@@ -36,25 +39,16 @@ fun PerfilScreen(
     val context = LocalContext.current
     val perfilState by perfilViewModel.perfilState.collectAsState()
     val imagenUri by perfilViewModel.imagenUri.collectAsState()
-    val usuarioActual by authViewModel.usuarioActual.collectAsState()
 
     var mostrarDialogoImagen by remember { mutableStateOf(false) }
     var imageUriTemp by remember { mutableStateOf<Uri?>(null) }
 
-    // +++ ESTE ES EL ARREGLO +++
-    // Usamos LaunchedEffect para llamar a cargarPerfil() CADA VEZ
-    // que esta pantalla entre en la composición.
-    // El 'init' del ViewModel solo se ejecuta una vez, pero esto
-    // se ejecutará cada vez que navegues aquí.
     LaunchedEffect(Unit) {
         perfilViewModel.cargarPerfil()
     }
-    // +++++++++++++++++++++++++++
 
-    // Permiso de cámara
     val cameraPermission = rememberPermissionState(Manifest.permission.CAMERA)
 
-    // Launcher para galería
     val galeriaLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
@@ -63,7 +57,6 @@ fun PerfilScreen(
         }
     }
 
-    // Launcher para cámara
     val camaraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture()
     ) { success ->
@@ -72,7 +65,6 @@ fun PerfilScreen(
         }
     }
 
-    // Función para abrir cámara
     fun abrirCamara() {
         val photoFile = File(context.cacheDir, "photo_${System.currentTimeMillis()}.jpg")
         imageUriTemp = FileProvider.getUriForFile(
@@ -83,7 +75,6 @@ fun PerfilScreen(
         camaraLauncher.launch(imageUriTemp)
     }
 
-    // Diálogo de selección
     if (mostrarDialogoImagen) {
         AlertDialog(
             onDismissRequest = { mostrarDialogoImagen = false },
@@ -164,12 +155,32 @@ fun PerfilScreen(
                 Box(
                     contentAlignment = Alignment.BottomEnd
                 ) {
-                    ImagenInteligente(
-                        // Usamos la imagen del estado del VM, que ahora sí
-                        // se habrá cargado (o borrado) correctamente.
-                        imagenUri = imagenUri,
-                        size = 150.dp
-                    )
+                    // Componente de imagen directamente
+                    Box(
+                        modifier = Modifier
+                            .size(150.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primaryContainer),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (imagenUri != null) {
+                            AsyncImage(
+                                model = imagenUri,
+                                contentDescription = "Imagen de perfil",
+                                modifier = Modifier
+                                    .size(150.dp)
+                                    .clip(CircleShape),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.Person,
+                                contentDescription = "Sin imagen",
+                                modifier = Modifier.size(75.dp),
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
+                    }
 
                     // Botón flotante para cambiar imagen
                     FloatingActionButton(
@@ -209,14 +220,12 @@ fun PerfilScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
-                                // Ahora usamos el usuario del PerfilState,
-                                // que se habrá recargado.
-                                text = perfilState.usuario?.name ?: "---",
+                                text = perfilState.usuario?.nombre ?: "---",
                                 style = MaterialTheme.typography.bodyLarge
                             )
                         }
 
-                        Divider()
+                        HorizontalDivider()
 
                         // Email
                         Row(
@@ -234,7 +243,7 @@ fun PerfilScreen(
                             )
                         }
 
-                        Divider()
+                        HorizontalDivider()
 
                         // Teléfono
                         Row(
@@ -252,7 +261,7 @@ fun PerfilScreen(
                             )
                         }
 
-                        Divider()
+                        HorizontalDivider()
 
                         // Rol
                         Row(
@@ -264,13 +273,28 @@ fun PerfilScreen(
                                 style = MaterialTheme.typography.labelLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
-                            Chip(
-                                label = {
-                                    Text(
-                                        text = (perfilState.usuario?.rol ?: "---").uppercase()
-                                    )
-                                }
+                            ProfileChip(
+                                label = (perfilState.usuario?.rol ?: "---").uppercase()
                             )
+                        }
+
+                        // Especialidad (solo para técnicos)
+                        if (perfilState.usuario?.rol == "tecnico" && !perfilState.usuario?.especialidad.isNullOrEmpty()) {
+                            HorizontalDivider()
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = "Especialidad:",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = perfilState.usuario?.especialidad ?: "---",
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
+                            }
                         }
                     }
                 }
@@ -278,7 +302,7 @@ fun PerfilScreen(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Mensaje de error si hay
-                AnimatedVisibility(visible = perfilState.error != null) {
+                if (perfilState.error != null) {
                     Card(
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.errorContainer
@@ -297,10 +321,9 @@ fun PerfilScreen(
     }
 }
 
-// (La función Chip se queda igual)
 @Composable
-fun Chip(
-    label: @Composable () -> Unit,
+fun ProfileChip(
+    label: String,
     modifier: Modifier = Modifier
 ) {
     Surface(
@@ -311,7 +334,11 @@ fun Chip(
         Box(
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
         ) {
-            label()
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
         }
     }
 }
