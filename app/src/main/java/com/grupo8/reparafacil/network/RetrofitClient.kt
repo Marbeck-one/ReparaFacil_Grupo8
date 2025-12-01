@@ -9,7 +9,7 @@ import java.util.concurrent.TimeUnit
 
 object RetrofitClient {
 
-    private const val BASE_URL = "https://x8ki-letl-twmt.n7.xano.io/api:Rfm_61dW/"
+    private const val BASE_URL = "https://reparafacil-api.onrender.com/api/"
 
     // Interceptor para agregar headers necesarios
     private val headerInterceptor = Interceptor { chain ->
@@ -34,9 +34,9 @@ object RetrofitClient {
     private val okHttpClient = OkHttpClient.Builder()
         .addInterceptor(headerInterceptor)  // Primero headers
         .addInterceptor(loggingInterceptor) // Luego logging
-        .connectTimeout(30, TimeUnit.SECONDS)
-        .readTimeout(30, TimeUnit.SECONDS)
-        .writeTimeout(30, TimeUnit.SECONDS)
+        .connectTimeout(90, TimeUnit.SECONDS)
+        .readTimeout(90, TimeUnit.SECONDS)
+        .writeTimeout(90, TimeUnit.SECONDS)
         .build()
 
     // Instancia de Retrofit

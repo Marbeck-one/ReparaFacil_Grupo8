@@ -10,7 +10,7 @@ interface ApiService {
 
     // ========== AUTENTICACIÓN ==========
 
-    @POST("auth/signup")
+    @POST("auth/register")
     @Headers("Content-Type: application/json")
     suspend fun registro(
         @Body body: RegistroRequest
@@ -22,7 +22,7 @@ interface ApiService {
         @Body body: LoginRequest
     ): Response<AuthResponse>
 
-    @GET("auth/me")
+    @GET("auth/profile")
     suspend fun obtenerPerfil(
         @Header("Authorization") token: String
     ): Response<Usuario>
@@ -61,7 +61,7 @@ interface ApiService {
 data class RegistroRequest(
     val email: String,
     val password: String,
-    val name: String? = null
+    val nombre: String? = null
 )
 
 data class LoginRequest(
