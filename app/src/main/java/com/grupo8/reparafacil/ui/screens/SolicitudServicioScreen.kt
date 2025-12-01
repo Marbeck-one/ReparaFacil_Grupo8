@@ -8,6 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -22,6 +23,10 @@ fun SolicitudServicioScreen(
 ) {
     val solicitudState by serviciosViewModel.solicitudState.collectAsState()
     val solicitudErrores by serviciosViewModel.solicitudErrores.collectAsState()
+
+    // Variable para saber si el usuario ya intentó enviar el formulario.
+    // Esto evita que la pantalla se cierre sola o muestre "Éxito" apenas entras.
+    var formularioEnviado by rememberSaveable { mutableStateOf(false) }
 
     var expandedTipo by remember { mutableStateOf(false) }
     val tiposServicio = listOf(
@@ -39,12 +44,16 @@ fun SolicitudServicioScreen(
         "Otro"
     )
 
-    // Navegar de vuelta cuando se crea el servicio
-    LaunchedEffect(solicitudState.isLoading) {
-        if (!solicitudState.isLoading &&
+    // Navegar de vuelta SOLO si se ha enviado el formulario y el estado se limpió (éxito)
+    LaunchedEffect(solicitudState.isLoading, solicitudState.tipo, solicitudState.descripcion) {
+        if (formularioEnviado &&
+            !solicitudState.isLoading &&
             solicitudState.tipo.isEmpty() &&
             solicitudState.descripcion.isEmpty()) {
-            // Formulario reseteado = servicio creado
+
+            // Esperamos un momento breve para que el usuario vea el mensaje de éxito antes de salir
+            // (Opcional, pero se ve mejor)
+            kotlinx.coroutines.delay(1500)
             onServicioCreado()
         }
     }
@@ -219,7 +228,10 @@ fun SolicitudServicioScreen(
 
             // Botón de enviar
             Button(
-                onClick = { serviciosViewModel.validarYCrearServicio() },
+                onClick = {
+                    formularioEnviado = true // Marcamos que el usuario intentó enviar
+                    serviciosViewModel.validarYCrearServicio()
+                },
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !solicitudState.isLoading
             ) {
@@ -239,9 +251,10 @@ fun SolicitudServicioScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Animación de éxito
+            // Animación de éxito (También controlada por formularioEnviado)
             AnimatedVisibility(
-                visible = !solicitudState.isLoading &&
+                visible = formularioEnviado &&
+                        !solicitudState.isLoading &&
                         solicitudState.tipo.isEmpty() &&
                         solicitudState.descripcion.isEmpty()
             ) {

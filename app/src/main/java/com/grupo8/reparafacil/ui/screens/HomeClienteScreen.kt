@@ -24,7 +24,7 @@ fun HomeClienteScreen(
     authViewModel: AuthViewModel,
     serviciosViewModel: ServiciosViewModel,
     onNavigateToPerfil: () -> Unit,
-    onNavigateToSolicitud: () -> Unit,
+    onNavigateToSolicitud: () -> Unit, // Esta es la función que navega
     onLogout: () -> Unit
 ) {
     val usuarioActual by authViewModel.usuarioActual.collectAsState()
@@ -90,7 +90,7 @@ fun HomeClienteScreen(
         },
         floatingActionButton = {
             ExtendedFloatingActionButton(
-                onClick = onNavigateToSolicitud,
+                onClick = onNavigateToSolicitud, // El botón flotante ya estaba bien conectado
                 icon = { Icon(Icons.Default.Add, contentDescription = "Solicitar") },
                 text = { Text("Nueva Reparación") }
             )
@@ -116,9 +116,15 @@ fun HomeClienteScreen(
                 val servicios = (serviciosState as UiState.Success<List<Servicio>>).data
 
                 if (servicios.isEmpty()) {
+                    // AQUÍ ESTÁ EL CAMBIO IMPORTANTE:
                     EmptyStateScreen(
+                        // 1. Pasamos el padding para que no se oculte tras la barra superior
+                        modifier = Modifier.padding(paddingValues),
                         mensaje = "No tienes servicios",
-                        descripcion = "Solicita tu primera reparación presionando el botón +"
+                        descripcion = "Solicita tu primera reparación ahora mismo",
+                        // 2. Conectamos la navegación al botón central
+                        onAction = onNavigateToSolicitud,
+                        actionLabel = "Nueva Reparación"
                     )
                 } else {
                     LazyColumn(

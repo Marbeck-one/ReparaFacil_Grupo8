@@ -3,6 +3,7 @@ package com.grupo8.reparafacil.ui.components
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Inbox
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -15,10 +16,14 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun EmptyStateScreen(
     mensaje: String = "No hay datos disponibles",
-    descripcion: String? = null
+    descripcion: String? = null,
+    modifier: Modifier = Modifier, // 1. Agregamos modifier para recibir el padding del Scaffold
+    onAction: (() -> Unit)? = null, // 2. Callback para la acción
+    actionLabel: String? = null     // 3. Texto del botón
 ) {
+    // Usamos el modifier que nos pasan (importante para que no lo tape el menú de arriba)
     Box(
-        modifier = Modifier.fillMaxSize(),
+        modifier = modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
         Column(
@@ -46,6 +51,14 @@ fun EmptyStateScreen(
                     textAlign = TextAlign.Center,
                     color = MaterialTheme.colorScheme.outline
                 )
+            }
+
+            // 4. Agregamos el botón si nos pasan la acción
+            if (onAction != null && actionLabel != null) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(onClick = onAction) {
+                    Text(text = actionLabel)
+                }
             }
         }
     }
