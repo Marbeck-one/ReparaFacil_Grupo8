@@ -42,7 +42,7 @@ interface ApiService {
     suspend fun obtenerPerfil(@Header("Authorization") token: String): Response<Usuario>
 
     companion object {
-        private const val BASE_URL = "https://reparafacil-backend.onrender.com/"
+        private const val BASE_URL = "https://reparafacil-api.onrender.com/"
 
         fun create(): ApiService {
             val loggingInterceptor = HttpLoggingInterceptor().apply {
