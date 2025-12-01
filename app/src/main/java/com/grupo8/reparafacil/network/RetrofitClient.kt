@@ -9,16 +9,13 @@ import java.util.concurrent.TimeUnit
 
 object RetrofitClient {
 
-    private const val BASE_URL = "https://reparafacil-api.onrender.com/api/"
+    private const val BASE_URL = "https://reparafacil-api.onrender.com"
 
     // Interceptor para agregar headers necesarios
     private val headerInterceptor = Interceptor { chain ->
         val originalRequest = chain.request()
         val requestBuilder = originalRequest.newBuilder()
             .header("Content-Type", "application/json")
-            .header("Accept", "application/json")
-            // Si Xano requiere API Key, descomenta la siguiente línea:
-            // .header("X-API-Key", "TU_API_KEY_AQUI")
             .method(originalRequest.method, originalRequest.body)
 
         val request = requestBuilder.build()
