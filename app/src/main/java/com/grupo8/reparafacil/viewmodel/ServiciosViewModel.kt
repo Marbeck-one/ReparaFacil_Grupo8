@@ -23,10 +23,24 @@ class ServiciosViewModel(application: Application) : AndroidViewModel(applicatio
     private val _solicitudErrores = MutableStateFlow(SolicitudServicioErrores())
     val solicitudErrores: StateFlow<SolicitudServicioErrores> = _solicitudErrores.asStateFlow()
 
+    // Opcional: Cargar servicios al iniciar el ViewModel
+    init {
+        cargarServicios()
+    }
+
     fun cargarServicios() {
         viewModelScope.launch {
             _serviciosState.value = UiState.Loading
-            _serviciosState.value = UiState.Success(emptyList())
+            // El ID ya se saca del token dentro del repositorio, pasamos string vacío o lo que tengas
+            repository.obtenerServicios("")
+                .collect { lista ->
+                    if (lista.isEmpty()) {
+                        // Podrías poner un estado Empty si quisieras, aquí asumimos Success vacío
+                        _serviciosState.value = UiState.Success(emptyList())
+                    } else {
+                        _serviciosState.value = UiState.Success(lista)
+                    }
+                }
         }
     }
 
@@ -83,10 +97,31 @@ class ServiciosViewModel(application: Application) : AndroidViewModel(applicatio
     private fun crearServicio() {
         viewModelScope.launch {
             _solicitudState.value = _solicitudState.value.copy(isLoading = true)
-            kotlinx.coroutines.delay(1000)
-            _solicitudState.value = SolicitudServicioState()
-            _solicitudErrores.value = SolicitudServicioErrores()
-            cargarServicios()
+
+            val currentState = _solicitudState.value
+
+            // Llamada real al backend sin clienteId
+            val result = repository.crearServicio(
+                tipo = currentState.tipo,
+                descripcion = currentState.descripcion,
+                direccion = currentState.direccion
+            )
+
+            _solicitudState.value = _solicitudState.value.copy(isLoading = false)
+
+            result.onSuccess {
+                // Éxito: Limpiamos el formulario
+                _solicitudState.value = SolicitudServicioState()
+                _solicitudErrores.value = SolicitudServicioErrores()
+
+                // Recargamos la lista para ver el nuevo servicio
+                cargarServicios()
+            }.onFailure { e ->
+                // Error: Mostramos mensaje en la UI
+                _solicitudErrores.value = _solicitudErrores.value.copy(
+                    descripcionError = "Error: ${e.message}"
+                )
+            }
         }
     }
 }

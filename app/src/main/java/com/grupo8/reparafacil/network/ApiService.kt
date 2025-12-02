@@ -1,6 +1,8 @@
 package com.grupo8.reparafacil.network
 
 import com.grupo8.reparafacil.model.AuthResponse
+import com.grupo8.reparafacil.model.Servicio
+import com.grupo8.reparafacil.model.ServicioRequest
 import com.grupo8.reparafacil.model.Usuario
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -9,6 +11,20 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.*
 import java.util.concurrent.TimeUnit
+
+// ========== RESPUESTAS GENÉRICAS ==========
+
+data class GenericResponse<T>(
+    val success: Boolean,
+    val message: String? = null,
+    val data: T
+)
+
+data class GenericListResponse<T>(
+    val success: Boolean,
+    val data: List<T>,
+    val total: Int? = null
+)
 
 // ========== MODELOS DE REQUEST ==========
 
@@ -32,6 +48,7 @@ data class RegistroRequest(
 
 interface ApiService {
 
+    // --- AUTENTICACIÓN ---
     @POST("api/auth/login")
     suspend fun login(@Body request: LoginRequest): Response<AuthResponse>
 
@@ -40,6 +57,20 @@ interface ApiService {
 
     @GET("api/auth/me")
     suspend fun obtenerPerfil(@Header("Authorization") token: String): Response<Usuario>
+
+    // --- SERVICIOS / REPARACIONES ---
+    // CORRECCIÓN: Se agregó "api/" al inicio de la ruta
+    @POST("api/reparacion")
+    suspend fun crearServicio(
+        @Header("Authorization") token: String,
+        @Body request: ServicioRequest
+    ): Response<GenericResponse<Servicio>>
+
+    // CORRECCIÓN: Se agregó "api/" al inicio de la ruta
+    @GET("api/reparacion")
+    suspend fun obtenerServicios(
+        @Header("Authorization") token: String
+    ): Response<GenericListResponse<Servicio>>
 
     companion object {
         private const val BASE_URL = "https://reparafacil-api.onrender.com/"

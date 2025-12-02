@@ -4,25 +4,26 @@ import com.google.gson.annotations.SerializedName
 
 data class Servicio(
     @SerializedName("_id") val id: String = "",
-    val clienteId: String = "",
+    val clienteId: String = "", // This is fine for READING responses
     val tecnicoId: String? = null,
-    val tipo: String = "", // NUEVO
+    val tipo: String = "",
     val descripcion: String = "",
-    val direccion: String = "", // NUEVO
+    val direccion: String = "",
     val estado: String = "pendiente",
     val fechaSolicitud: String = "",
     val fechaCompletado: String? = null,
     val costo: Double? = null,
-    val garantia: Boolean = false, // NUEVO
+    val garantia: Boolean = false,
     val createdAt: String? = null,
     val updatedAt: String? = null
 )
 
+// UPDATE THIS CLASS:
 data class ServicioRequest(
     val tipo: String,
     val descripcion: String,
-    val direccion: String,
-    val clienteId: String
+    val direccion: String
+    // REMOVED: val clienteId: String
 )
 
 // Estado UI para solicitud de servicio
