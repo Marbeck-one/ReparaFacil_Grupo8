@@ -21,15 +21,14 @@ class ServiciosViewModel(application: Application) : AndroidViewModel(applicatio
     private val _serviciosState = MutableStateFlow<UiState<List<Servicio>>>(UiState.Idle)
     val serviciosState: StateFlow<UiState<List<Servicio>>> = _serviciosState.asStateFlow()
 
-    // --- NUEVO: Estados para Filtros ---
+    // --- ESTADOS PARA FILTROS ---
     private val _busquedaQuery = MutableStateFlow("")
     val busquedaQuery = _busquedaQuery.asStateFlow()
 
-    private val _filtroEstado = MutableStateFlow("Todos") // "Todos", "Pendiente", "En Proceso", "Completado"
+    private val _filtroEstado = MutableStateFlow("Todos")
     val filtroEstado = _filtroEstado.asStateFlow()
 
-    // --- NUEVO: Lógica de Filtrado Reactiva ---
-    // Combina la lista original, el texto de búsqueda y el chip de filtro seleccionado
+    // --- LÓGICA DE FILTRADO REACTIVA ---
     val serviciosFiltrados: StateFlow<List<Servicio>> = combine(
         _serviciosState,
         _busquedaQuery,
@@ -37,11 +36,11 @@ class ServiciosViewModel(application: Application) : AndroidViewModel(applicatio
     ) { state, query, estadoFilter ->
         if (state is UiState.Success) {
             state.data.filter { servicio ->
-                // 1. Filtro de Texto (Busca en descripción o tipo)
+                // 1. Filtro de Texto
                 val coincideTexto = servicio.descripcion.contains(query, ignoreCase = true) ||
                         servicio.tipo.contains(query, ignoreCase = true)
 
-                // 2. Filtro de Estado (Chip seleccionado)
+                // 2. Filtro de Estado
                 val coincideEstado = if (estadoFilter == "Todos") true else {
                     servicio.estado.equals(estadoFilter, ignoreCase = true)
                 }
@@ -86,7 +85,23 @@ class ServiciosViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    // ... (Mantén aquí el resto de funciones: actualizarTipo, actualizarDescripcion, validarYCrearServicio, etc.) ...
+    // --- NUEVO: Función para cambiar estado ---
+    fun cambiarEstadoServicio(servicioId: String, nuevoEstado: String) {
+        viewModelScope.launch {
+            // Llamamos al repositorio
+            val result = repository.actualizarEstado(servicioId, nuevoEstado)
+
+            result.onSuccess {
+                // Si funciona, recargamos la lista para ver el cambio reflejado inmediatamente
+                cargarServicios()
+            }.onFailure { e ->
+                // Aquí podrías manejar el error, por ahora lo imprimimos
+                e.printStackTrace()
+            }
+        }
+    }
+
+    // ... (Funciones de formulario de creación) ...
     fun actualizarTipo(tipo: String) {
         _solicitudState.value = _solicitudState.value.copy(tipo = tipo)
         _solicitudErrores.value = _solicitudErrores.value.copy(tipoError = null)
@@ -143,7 +158,6 @@ class ServiciosViewModel(application: Application) : AndroidViewModel(applicatio
 
             val currentState = _solicitudState.value
 
-            // Llamada real al backend sin clienteId
             val result = repository.crearServicio(
                 tipo = currentState.tipo,
                 descripcion = currentState.descripcion,
@@ -153,14 +167,10 @@ class ServiciosViewModel(application: Application) : AndroidViewModel(applicatio
             _solicitudState.value = _solicitudState.value.copy(isLoading = false)
 
             result.onSuccess {
-                // Éxito: Limpiamos el formulario
                 _solicitudState.value = SolicitudServicioState()
                 _solicitudErrores.value = SolicitudServicioErrores()
-
-                // Recargamos la lista para ver el nuevo servicio
                 cargarServicios()
             }.onFailure { e ->
-                // Error: Mostramos mensaje en la UI
                 _solicitudErrores.value = _solicitudErrores.value.copy(
                     descripcionError = "Error: ${e.message}"
                 )

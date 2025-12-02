@@ -19,13 +19,11 @@ class ServiciosRepository(private val context: Context) {
         tipo: String,
         descripcion: String,
         direccion: String
-        // REMOVED: clienteId from parameters as it is not needed
     ): Result<Servicio> {
         return try {
             val token = DataStoreManager.obtenerToken(context).first()
                 ?: return Result.failure(Exception("No estás autenticado"))
 
-            // UPDATE: Create object without clienteId
             val body = ServicioRequest(
                 tipo = tipo,
                 descripcion = descripcion,
@@ -42,7 +40,6 @@ class ServiciosRepository(private val context: Context) {
                     Result.failure(Exception(apiResponse.message ?: "Error desconocido"))
                 }
             } else {
-                // Parse error body if needed, but usually code is enough
                 Result.failure(IOException("Error del servidor: ${response.code()}"))
             }
         } catch (e: Exception) {
@@ -50,7 +47,32 @@ class ServiciosRepository(private val context: Context) {
         }
     }
 
-    // ... (obtenerServicios remains the same) ...
+    // ========== ACTUALIZAR ESTADO (NUEVO) ==========
+    suspend fun actualizarEstado(id: String, nuevoEstado: String): Result<Servicio> {
+        return try {
+            val token = DataStoreManager.obtenerToken(context).first()
+                ?: return Result.failure(Exception("No estás autenticado"))
+
+            // Preparamos el cuerpo solo con el campo que cambia
+            val body = mapOf("estado" to nuevoEstado)
+
+            val response = apiService.actualizarServicio("Bearer $token", id, body)
+
+            if (response.isSuccessful && response.body() != null) {
+                val apiResponse = response.body()!!
+                if (apiResponse.success) {
+                    Result.success(apiResponse.data)
+                } else {
+                    Result.failure(Exception(apiResponse.message ?: "Error al actualizar"))
+                }
+            } else {
+                Result.failure(IOException("Error del servidor: ${response.code()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     // ========== OBTENER SERVICIOS ==========
     fun obtenerServicios(clienteId: String): Flow<List<Servicio>> = flow {
         try {

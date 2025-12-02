@@ -59,18 +59,25 @@ interface ApiService {
     suspend fun obtenerPerfil(@Header("Authorization") token: String): Response<Usuario>
 
     // --- SERVICIOS / REPARACIONES ---
-    // CORRECCIÓN: Se agregó "api/" al inicio de la ruta
+
     @POST("api/reparacion")
     suspend fun crearServicio(
         @Header("Authorization") token: String,
         @Body request: ServicioRequest
     ): Response<GenericResponse<Servicio>>
 
-    // CORRECCIÓN: Se agregó "api/" al inicio de la ruta
     @GET("api/reparacion")
     suspend fun obtenerServicios(
         @Header("Authorization") token: String
     ): Response<GenericListResponse<Servicio>>
+
+    // --- NUEVO: Actualizar Estado (PATCH) ---
+    @PATCH("api/reparacion/{id}")
+    suspend fun actualizarServicio(
+        @Header("Authorization") token: String,
+        @Path("id") id: String,
+        @Body cambios: Map<String, String> // Ej: {"estado": "en_proceso"}
+    ): Response<GenericResponse<Servicio>>
 
     companion object {
         private const val BASE_URL = "https://reparafacil-api.onrender.com/"
