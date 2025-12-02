@@ -2,6 +2,7 @@ package com.grupo8.reparafacil.ui.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -24,11 +25,16 @@ fun HomeClienteScreen(
     authViewModel: AuthViewModel,
     serviciosViewModel: ServiciosViewModel,
     onNavigateToPerfil: () -> Unit,
-    onNavigateToSolicitud: () -> Unit, // Esta es la función que navega
+    onNavigateToSolicitud: () -> Unit,
     onLogout: () -> Unit
 ) {
     val usuarioActual by authViewModel.usuarioActual.collectAsState()
+
+    // Estados del ViewModel (Original y Filtrados)
     val serviciosState by serviciosViewModel.serviciosState.collectAsState()
+    val serviciosFiltrados by serviciosViewModel.serviciosFiltrados.collectAsState() // Asegúrate de tener esto en el VM
+    val searchQuery by serviciosViewModel.busquedaQuery.collectAsState()
+    val activeFilter by serviciosViewModel.filtroEstado.collectAsState()
 
     var mostrarMenuUsuario by remember { mutableStateOf(false) }
 
@@ -90,61 +96,120 @@ fun HomeClienteScreen(
         },
         floatingActionButton = {
             ExtendedFloatingActionButton(
-                onClick = onNavigateToSolicitud, // El botón flotante ya estaba bien conectado
+                onClick = onNavigateToSolicitud,
                 icon = { Icon(Icons.Default.Add, contentDescription = "Solicitar") },
                 text = { Text("Nueva Reparación") }
             )
         }
     ) { paddingValues ->
-        when (serviciosState) {
-            is UiState.Idle -> {
-                LoadingScreen(mensaje = "Preparando...")
-            }
 
-            is UiState.Loading -> {
-                LoadingScreen(mensaje = "Cargando servicios...")
-            }
-
-            is UiState.Error -> {
-                ErrorScreen(
-                    mensaje = (serviciosState as UiState.Error).message,
-                    onRetry = { serviciosViewModel.cargarServicios() }
-                )
-            }
-
-            is UiState.Success -> {
-                val servicios = (serviciosState as UiState.Success<List<Servicio>>).data
-
-                if (servicios.isEmpty()) {
-                    // AQUÍ ESTÁ EL CAMBIO IMPORTANTE:
-                    EmptyStateScreen(
-                        // 1. Pasamos el padding para que no se oculte tras la barra superior
-                        modifier = Modifier.padding(paddingValues),
-                        mensaje = "No tienes servicios",
-                        descripcion = "Solicita tu primera reparación ahora mismo",
-                        // 2. Conectamos la navegación al botón central
-                        onAction = onNavigateToSolicitud,
-                        actionLabel = "Nueva Reparación"
+        Column(
+            modifier = Modifier
+                .padding(paddingValues)
+                .fillMaxSize()
+        ) {
+            // --- SECCIÓN DE FILTROS (Solo si hay datos cargados con éxito) ---
+            if (serviciosState is UiState.Success && (serviciosState as UiState.Success).data.isNotEmpty()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // 1. Barra de Búsqueda
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { serviciosViewModel.onBusquedaChange(it) },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("Buscar por descripción o tipo...") },
+                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                        singleLine = true,
+                        shape = MaterialTheme.shapes.medium
                     )
-                } else {
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(paddingValues)
-                            .padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        item {
-                            Text(
-                                text = "Mis Servicios",
-                                style = MaterialTheme.typography.headlineSmall,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                        }
 
-                        items(servicios) { servicio ->
-                            ServicioCard(servicio = servicio)
+                    // 2. Chips de Categoría/Estado
+                    val filtros = listOf("Todos", "Pendiente", "Asignado", "En_Proceso", "Completado")
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(filtros) { filtro ->
+                            FilterChip(
+                                selected = activeFilter.equals(filtro, ignoreCase = true),
+                                onClick = { serviciosViewModel.onFiltroEstadoChange(filtro) },
+                                label = { Text(filtro.replace("_", " ")) },
+                                leadingIcon = if (activeFilter.equals(filtro, ignoreCase = true)) {
+                                    { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                                } else null
+                            )
+                        }
+                    }
+                }
+                Divider()
+            }
+
+            // --- ESTADOS DE LA UI ---
+            when (serviciosState) {
+                is UiState.Idle -> {
+                    LoadingScreen(mensaje = "Preparando...")
+                }
+
+                is UiState.Loading -> {
+                    LoadingScreen(mensaje = "Cargando servicios...")
+                }
+
+                is UiState.Error -> {
+                    ErrorScreen(
+                        mensaje = (serviciosState as UiState.Error).message,
+                        onRetry = { serviciosViewModel.cargarServicios() }
+                    )
+                }
+
+                is UiState.Success -> {
+                    // Verificar si la lista FILTRADA está vacía
+                    if (serviciosFiltrados.isEmpty()) {
+                        // Caso 1: No hay servicios en absoluto (ni siquiera en la lista original)
+                        if ((serviciosState as UiState.Success).data.isEmpty()) {
+                            EmptyStateScreen(
+                                modifier = Modifier.fillMaxSize(),
+                                mensaje = "No tienes servicios",
+                                descripcion = "Solicita tu primera reparación ahora mismo",
+                                onAction = onNavigateToSolicitud,
+                                actionLabel = "Nueva Reparación"
+                            )
+                        } else {
+                            // Caso 2: Hay servicios, pero el filtro no encontró coincidencias
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "No se encontraron resultados para tu búsqueda.",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    } else {
+                        // Caso 3: Mostrar lista filtrada
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                            contentPadding = PaddingValues(bottom = 80.dp, top = 16.dp)
+                        ) {
+                            item {
+                                Text(
+                                    text = "Resultados (${serviciosFiltrados.size})",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                            }
+
+                            items(serviciosFiltrados) { servicio ->
+                                ServicioCard(servicio = servicio)
+                            }
                         }
                     }
                 }

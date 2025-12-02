@@ -6,16 +6,56 @@ import androidx.lifecycle.viewModelScope
 import com.grupo8.reparafacil.model.*
 import com.grupo8.reparafacil.repository.ServiciosRepository
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class ServiciosViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = ServiciosRepository(application.applicationContext)
 
+    // Estado original de la carga de datos (Fuente de la verdad)
     private val _serviciosState = MutableStateFlow<UiState<List<Servicio>>>(UiState.Idle)
     val serviciosState: StateFlow<UiState<List<Servicio>>> = _serviciosState.asStateFlow()
+
+    // --- NUEVO: Estados para Filtros ---
+    private val _busquedaQuery = MutableStateFlow("")
+    val busquedaQuery = _busquedaQuery.asStateFlow()
+
+    private val _filtroEstado = MutableStateFlow("Todos") // "Todos", "Pendiente", "En Proceso", "Completado"
+    val filtroEstado = _filtroEstado.asStateFlow()
+
+    // --- NUEVO: Lógica de Filtrado Reactiva ---
+    // Combina la lista original, el texto de búsqueda y el chip de filtro seleccionado
+    val serviciosFiltrados: StateFlow<List<Servicio>> = combine(
+        _serviciosState,
+        _busquedaQuery,
+        _filtroEstado
+    ) { state, query, estadoFilter ->
+        if (state is UiState.Success) {
+            state.data.filter { servicio ->
+                // 1. Filtro de Texto (Busca en descripción o tipo)
+                val coincideTexto = servicio.descripcion.contains(query, ignoreCase = true) ||
+                        servicio.tipo.contains(query, ignoreCase = true)
+
+                // 2. Filtro de Estado (Chip seleccionado)
+                val coincideEstado = if (estadoFilter == "Todos") true else {
+                    servicio.estado.equals(estadoFilter, ignoreCase = true)
+                }
+
+                coincideTexto && coincideEstado
+            }
+        } else {
+            emptyList()
+        }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
 
     private val _solicitudState = MutableStateFlow(SolicitudServicioState())
     val solicitudState: StateFlow<SolicitudServicioState> = _solicitudState.asStateFlow()
@@ -23,27 +63,30 @@ class ServiciosViewModel(application: Application) : AndroidViewModel(applicatio
     private val _solicitudErrores = MutableStateFlow(SolicitudServicioErrores())
     val solicitudErrores: StateFlow<SolicitudServicioErrores> = _solicitudErrores.asStateFlow()
 
-    // Opcional: Cargar servicios al iniciar el ViewModel
     init {
         cargarServicios()
+    }
+
+    // --- FUNCIONES PARA LA UI ---
+    fun onBusquedaChange(text: String) {
+        _busquedaQuery.value = text
+    }
+
+    fun onFiltroEstadoChange(estado: String) {
+        _filtroEstado.value = estado
     }
 
     fun cargarServicios() {
         viewModelScope.launch {
             _serviciosState.value = UiState.Loading
-            // El ID ya se saca del token dentro del repositorio, pasamos string vacío o lo que tengas
             repository.obtenerServicios("")
                 .collect { lista ->
-                    if (lista.isEmpty()) {
-                        // Podrías poner un estado Empty si quisieras, aquí asumimos Success vacío
-                        _serviciosState.value = UiState.Success(emptyList())
-                    } else {
-                        _serviciosState.value = UiState.Success(lista)
-                    }
+                    _serviciosState.value = UiState.Success(lista)
                 }
         }
     }
 
+    // ... (Mantén aquí el resto de funciones: actualizarTipo, actualizarDescripcion, validarYCrearServicio, etc.) ...
     fun actualizarTipo(tipo: String) {
         _solicitudState.value = _solicitudState.value.copy(tipo = tipo)
         _solicitudErrores.value = _solicitudErrores.value.copy(tipoError = null)
