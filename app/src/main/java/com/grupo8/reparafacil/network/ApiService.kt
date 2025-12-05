@@ -4,6 +4,7 @@ import com.grupo8.reparafacil.model.AuthResponse
 import com.grupo8.reparafacil.model.Servicio
 import com.grupo8.reparafacil.model.ServicioRequest
 import com.grupo8.reparafacil.model.Usuario
+import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Response
@@ -26,7 +27,11 @@ data class GenericListResponse<T>(
     val total: Int? = null
 )
 
+// NOTA: Borramos 'data class UploadResponse' de aquí porque ya está en UploadResponse.kt
+
 // ========== MODELOS DE REQUEST ==========
+
+data class UpdatePhotoRequest(val fotoPerfil: String)
 
 data class LoginRequest(
     val email: String,
@@ -58,6 +63,21 @@ interface ApiService {
     @GET("api/auth/me")
     suspend fun obtenerPerfil(@Header("Authorization") token: String): Response<Usuario>
 
+    // --- SUBIDA DE IMÁGENES ---
+    @Multipart
+    @POST("api/upload/image")
+    suspend fun subirImagen(
+        @Header("Authorization") token: String,
+        @Part file: MultipartBody.Part
+    ): Response<UploadResponse>
+
+    // --- VINCULAR URL AL PERFIL ---
+    @PATCH("api/auth/me/photo")
+    suspend fun actualizarFotoUsuario(
+        @Header("Authorization") token: String,
+        @Body body: UpdatePhotoRequest
+    ): Response<Usuario>
+
     // --- SERVICIOS / REPARACIONES ---
     @POST("api/reparacion")
     suspend fun crearServicio(
@@ -70,7 +90,6 @@ interface ApiService {
         @Header("Authorization") token: String
     ): Response<GenericListResponse<Servicio>>
 
-    // --- ESTA ES LA FUNCIÓN QUE FALTABA ---
     @PATCH("api/reparacion/{id}")
     suspend fun actualizarServicio(
         @Header("Authorization") token: String,
