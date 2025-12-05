@@ -10,9 +10,19 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class AuthViewModel(application: Application) : AndroidViewModel(application) {
+// Usamos @JvmOverloads para permitir la inyección del repositorio mock en los tests
+class AuthViewModel @JvmOverloads constructor(
+    application: Application,
+    private val testRepository: AuthRepository? = null
+) : AndroidViewModel(application) {
 
-    private val repository = AuthRepository(application.applicationContext)
+    // Si testRepository es null (app real), crea uno nuevo. Si no (test), usa el mock.
+    private val repository = testRepository ?: AuthRepository(application.applicationContext)
+
+    // SOLUCIÓN AL ERROR:
+    // Definimos nuestra propia Regex en lugar de usar android.util.Patterns.EMAIL_ADDRESS
+    // Esto permite que los tests unitarios funcionen sin necesidad del emulador de Android.
+    private val emailRegex = Regex("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,6}$")
 
     // Estado del formulario de registro
     private val _registroState = MutableStateFlow(RegistroUiState())
@@ -87,7 +97,8 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                 emailError = "El email es requerido"
             )
             esValido = false
-        } else if (!android.util.Patterns.EMAIL_ADDRESS.matcher(state.email).matches()) {
+        } else if (!emailRegex.matches(state.email)) {
+            // CAMBIO AQUÍ: Usamos nuestra 'emailRegex' en lugar de 'android.util.Patterns'
             _registroErrores.value = _registroErrores.value.copy(
                 emailError = "Email inválido"
             )
@@ -180,7 +191,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
 
     // ========== CARGAR USUARIO GUARDADO ==========
 
-    private fun cargarUsuarioGuardado() {
+    fun cargarUsuarioGuardado() {
         viewModelScope.launch {
             repository.obtenerUsuarioGuardado().collect { usuario ->
                 _usuarioActual.value = usuario

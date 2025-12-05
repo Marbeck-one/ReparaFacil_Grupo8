@@ -6,16 +6,54 @@ import androidx.lifecycle.viewModelScope
 import com.grupo8.reparafacil.model.*
 import com.grupo8.reparafacil.repository.ServiciosRepository
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-class ServiciosViewModel(application: Application) : AndroidViewModel(application) {
+// Usamos @JvmOverloads para permitir la inyección del repositorio mock en los tests
+class ServiciosViewModel @JvmOverloads constructor(
+    application: Application,
+    private val testRepository: ServiciosRepository? = null
+) : AndroidViewModel(application) {
 
-    private val repository = ServiciosRepository(application.applicationContext)
+    // Si testRepository es null (app real), crea uno nuevo. Si no (test), usa el mock.
+    private val repository = testRepository ?: ServiciosRepository(application.applicationContext)
 
+    // ... (El resto de tus estados se mantienen igual) ...
     private val _serviciosState = MutableStateFlow<UiState<List<Servicio>>>(UiState.Idle)
     val serviciosState: StateFlow<UiState<List<Servicio>>> = _serviciosState.asStateFlow()
+
+    private val _busquedaQuery = MutableStateFlow("")
+    val busquedaQuery = _busquedaQuery.asStateFlow()
+
+    private val _filtroEstado = MutableStateFlow("Todos")
+    val filtroEstado = _filtroEstado.asStateFlow()
+
+    val serviciosFiltrados: StateFlow<List<Servicio>> = combine(
+        _serviciosState,
+        _busquedaQuery,
+        _filtroEstado
+    ) { state, query, estadoFilter ->
+        if (state is UiState.Success) {
+            state.data.filter { servicio ->
+                val coincideTexto = servicio.descripcion.contains(query, ignoreCase = true) ||
+                        servicio.tipo.contains(query, ignoreCase = true)
+                val coincideEstado = if (estadoFilter == "Todos") true else {
+                    servicio.estado.equals(estadoFilter, ignoreCase = true)
+                }
+                coincideTexto && coincideEstado
+            }
+        } else {
+            emptyList()
+        }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
 
     private val _solicitudState = MutableStateFlow(SolicitudServicioState())
     val solicitudState: StateFlow<SolicitudServicioState> = _solicitudState.asStateFlow()
@@ -23,27 +61,38 @@ class ServiciosViewModel(application: Application) : AndroidViewModel(applicatio
     private val _solicitudErrores = MutableStateFlow(SolicitudServicioErrores())
     val solicitudErrores: StateFlow<SolicitudServicioErrores> = _solicitudErrores.asStateFlow()
 
-    // Opcional: Cargar servicios al iniciar el ViewModel
     init {
         cargarServicios()
     }
 
+    // Funciones
+    fun onBusquedaChange(text: String) { _busquedaQuery.value = text }
+    fun onFiltroEstadoChange(estado: String) { _filtroEstado.value = estado }
+
     fun cargarServicios() {
         viewModelScope.launch {
             _serviciosState.value = UiState.Loading
-            // El ID ya se saca del token dentro del repositorio, pasamos string vacío o lo que tengas
-            repository.obtenerServicios("")
-                .collect { lista ->
-                    if (lista.isEmpty()) {
-                        // Podrías poner un estado Empty si quisieras, aquí asumimos Success vacío
-                        _serviciosState.value = UiState.Success(emptyList())
-                    } else {
-                        _serviciosState.value = UiState.Success(lista)
-                    }
-                }
+            repository.obtenerServicios("").collect { lista ->
+                _serviciosState.value = UiState.Success(lista)
+            }
         }
     }
 
+    // ESTA ES LA FUNCIÓN QUE DABA PROBLEMAS
+    // Asegúrate de que repository.actualizarEstado exista en ServiciosRepository.kt
+    fun cambiarEstadoServicio(servicioId: String, nuevoEstado: String) {
+        viewModelScope.launch {
+            val result = repository.actualizarEstado(servicioId, nuevoEstado)
+
+            result.onSuccess {
+                cargarServicios()
+            }.onFailure { e ->
+                e.printStackTrace()
+            }
+        }
+    }
+
+    // ... (Funciones de validación y creación siguen igual) ...
     fun actualizarTipo(tipo: String) {
         _solicitudState.value = _solicitudState.value.copy(tipo = tipo)
         _solicitudErrores.value = _solicitudErrores.value.copy(tipoError = null)
@@ -64,63 +113,37 @@ class ServiciosViewModel(application: Application) : AndroidViewModel(applicatio
         var esValido = true
 
         if (state.tipo.isBlank()) {
-            _solicitudErrores.value = _solicitudErrores.value.copy(
-                tipoError = "Selecciona un tipo de servicio"
-            )
+            _solicitudErrores.value = _solicitudErrores.value.copy(tipoError = "Selecciona un tipo de servicio")
             esValido = false
         }
-
         if (state.descripcion.isBlank()) {
-            _solicitudErrores.value = _solicitudErrores.value.copy(
-                descripcionError = "La descripción es requerida"
-            )
+            _solicitudErrores.value = _solicitudErrores.value.copy(descripcionError = "La descripción es requerida")
             esValido = false
         } else if (state.descripcion.length < 10) {
-            _solicitudErrores.value = _solicitudErrores.value.copy(
-                descripcionError = "Mínimo 10 caracteres"
-            )
+            _solicitudErrores.value = _solicitudErrores.value.copy(descripcionError = "Mínimo 10 caracteres")
             esValido = false
         }
-
         if (state.direccion.isBlank()) {
-            _solicitudErrores.value = _solicitudErrores.value.copy(
-                direccionError = "La dirección es requerida"
-            )
+            _solicitudErrores.value = _solicitudErrores.value.copy(direccionError = "La dirección es requerida")
             esValido = false
         }
 
-        if (esValido) {
-            crearServicio()
-        }
+        if (esValido) crearServicio()
     }
 
     private fun crearServicio() {
         viewModelScope.launch {
             _solicitudState.value = _solicitudState.value.copy(isLoading = true)
-
             val currentState = _solicitudState.value
-
-            // Llamada real al backend sin clienteId
-            val result = repository.crearServicio(
-                tipo = currentState.tipo,
-                descripcion = currentState.descripcion,
-                direccion = currentState.direccion
-            )
-
+            val result = repository.crearServicio(currentState.tipo, currentState.descripcion, currentState.direccion)
             _solicitudState.value = _solicitudState.value.copy(isLoading = false)
 
             result.onSuccess {
-                // Éxito: Limpiamos el formulario
                 _solicitudState.value = SolicitudServicioState()
                 _solicitudErrores.value = SolicitudServicioErrores()
-
-                // Recargamos la lista para ver el nuevo servicio
                 cargarServicios()
             }.onFailure { e ->
-                // Error: Mostramos mensaje en la UI
-                _solicitudErrores.value = _solicitudErrores.value.copy(
-                    descripcionError = "Error: ${e.message}"
-                )
+                _solicitudErrores.value = _solicitudErrores.value.copy(descripcionError = "Error: ${e.message}")
             }
         }
     }

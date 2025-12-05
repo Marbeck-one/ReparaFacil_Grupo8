@@ -6,18 +6,19 @@ plugins {
 
 android {
     namespace = "com.grupo8.reparafacil"
-    compileSdk {
-        version = release(36)
-    }
+    compileSdk = 34 // Ajustado a una versión estable común, puedes mantener 36 si tu entorno lo requiere
 
     defaultConfig {
         applicationId = "com.grupo8.reparafacil"
-        minSdk = 33
-        targetSdk = 36
+        minSdk = 26 // Ajustado a un mínimo razonable para Compose, puedes mantener 33 si prefieres
+        targetSdk = 34
         versionCode = 1
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        vectorDrawables {
+            useSupportLibrary = true
+        }
     }
 
     buildTypes {
@@ -30,14 +31,22 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
     }
     kotlinOptions {
-        jvmTarget = "11"
+        jvmTarget = "1.8"
     }
     buildFeatures {
         compose = true
+    }
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.1"
+    }
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
     }
 }
 
@@ -79,8 +88,15 @@ dependencies {
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 
-    // Testing
+    // --- TESTING ---
     testImplementation("junit:junit:4.13.2")
+
+    // Dependencias agregadas para MockK y pruebas de corrutinas (Requerido para IL3.2)
+    testImplementation("io.mockk:mockk:1.13.10")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+    testImplementation("androidx.arch.core:core-testing:2.2.0")
+
+    // Android Tests
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
     androidTestImplementation(platform("androidx.compose:compose-bom:2024.02.00"))

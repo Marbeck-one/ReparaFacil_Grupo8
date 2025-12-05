@@ -1,16 +1,28 @@
+# ReparaFacil - Gestión de Servicios Técnicos 🛠️
+
+## 👥 Integrantes
+* **Vincent Farenden Cerón**
+* **Rodrigo Martínez Becker**
+* **Sección:** DSY1105
+* **Equipo:** Grupo 8
+
+-----
+
 ## Descripción General
 
-ReparaFácil permite que clientes soliciten reparaciones y técnicos visualicen servicios disponibles. Cada usuario tiene un rol específico (cliente o técnico) que determina el flujo de la aplicación.
+ReparaFácil permite que clientes soliciten reparaciones y técnicos visualicen servicios disponibles. Cada usuario tiene un rol específico (cliente o técnico) que determina el flujo de la aplicación. La aplicación consume una API REST desplegada en Render y cuenta con validación de calidad mediante pruebas unitarias.
 
 -----
 
 ## Stack Tecnológico
 
 - **Lenguaje:** Kotlin
-- **UI:** Jetpack Compose
-- **Arquitectura:** MVVM (ViewModel + StateFlow)
+- **UI:** Jetpack Compose (Material Design 3)
+- **Arquitectura:** MVVM (Model-View-ViewModel) + Repository Pattern
 - **Persistencia:** DataStore Preferences
-- **API REST:** Retrofit + Gson
+- **API REST:** Retrofit + Gson + OkHttp
+- **Backend:** NestJS desplegado en Render
+- **Testing:** JUnit + MockK + Coroutines Test (Cobertura > 80% en lógica)
 - **Permisos:** Accompanist Permissions
 - **Imágenes:** Coil Compose
 - **Navegación:** Navigation Compose
@@ -35,134 +47,67 @@ app/src/main/java/com/grupo8/reparafacil/
 
 -----
 
+## 🔗 Integración con Backend (API)
+
+La aplicación se conecta a un servidor remoto desplegado en Render.
+
+**Base URL:** `https://reparafacil-api.onrender.com/`
+
+**Endpoints Principales:**
+* `POST /api/auth/login`: Autenticación y obtención de Token JWT.
+* `POST /api/auth/signup`: Registro de usuarios.
+* `GET /api/reparacion`: Listado de servicios (filtrado por rol en backend).
+* `POST /api/reparacion`: Creación de solicitudes.
+* `PATCH /api/reparacion/{id}`: Actualización de estados por técnicos.
+
+-----
+
+## 🧪 Calidad y Pruebas Unitarias
+
+El proyecto cumple con el estándar de calidad exigido, cubriendo más del **80% de la lógica de negocio** en los ViewModels mediante pruebas unitarias.
+
+**Tecnologías usadas:**
+* **JUnit 4:** Framework de pruebas.
+* **MockK:** Para simular dependencias (Repositorios, Contexto, DataStore).
+* **Kotlin Coroutines Test:** Para probar flujos asíncronos (`viewModelScope`).
+
+**Cómo ejecutar los tests:**
+1. En Android Studio, ir a la carpeta `app/src/test/java`.
+2. Clic derecho sobre el paquete `com.grupo8.reparafacil`.
+3. Seleccionar **"Run Tests in '...'"** o **"Run with Coverage"**.
+
+-----
+
+## 📦 Entregables (Build)
+
+Se ha generado el ejecutable firmado para producción:
+* **Archivo APK:** `app-release.apk` (Ubicado en la carpeta `release/` o raíz).
+* **Firma:** `keystore.jks` (Llave de firma incluida en el repositorio).
+* **Configuración:** El archivo `build.gradle.kts` incluye la configuración `signingConfigs` para generar el build automáticamente.
+
+-----
+
 ## Funcionalidades Implementadas
 
 ### Autenticación
-
 - Login con validación de email y password (≥6 caracteres)
 - Registro de nuevos usuarios (cliente o técnico)
 - Token JWT persistido en DataStore
 - Sesión automática al reiniciar app
 
 ### Navegación
-
 - **LoginScreen:** Acceso a la aplicación
 - **RegistroScreen:** Crear nueva cuenta
 - **HomeClienteScreen:** Lista de servicios solicitados
-- **HomeTecnicoScreen:** Servicios disponibles
-- **PerfilScreen:** Datos personales e imagen de perfil
-
-### Formularios Validados
-
-- Email con formato válido
-- Password mínimo 6 caracteres
-- Feedback visual de errores bajo cada campo
-
-### Persistencia Local
-
-- **DataStore:** Token de sesión y datos de usuario.
-- **Imagen de perfil:** URI guardada localmente por ID de usuario, persiste entre sesiones.
-- **Cerrar sesión:** Limpia solo los datos de la sesión activa, preservando datos de perfiles (fotos).
-
-### Recursos Nativos
-
-- **Cámara:** Capturar foto de perfil
-- **Galería:** Seleccionar imagen existente
-- **Permisos:** Solicitados con Accompanist Permissions
-
-### Gestión de Estado
-
-- **Loading:** Indicador de carga visible
-- **Success:** Datos mostrados correctamente
-- **Error:** Mensajes de error con opción reintentar
-- **Empty:** Estado vacío con instrucciones
-
-### Consumo de API
-
-- Autenticación: `/auth/login`, `/auth/signup`
-- Perfil: `GET /auth/me`
-- Servicios: `GET /servicios`
-- Manejo automático de errores 400/401/500
-- Token Bearer en headers
-
------
-
-## Cómo Ejecutar
-
-### Requisitos
-
-- Android Studio (Jellyfish o superior)
-- JDK 11+
-- Emulador o dispositivo Android 12+
-
-### Pasos
-
-1.  Abre el proyecto en Android Studio
-2.  Sincroniza Gradle: `File → Sync Now`
-3.  Crea un emulador: `Tools → Device Manager → Create Virtual Device`
-4.  Ejecuta: `Run → Run 'app'` o `Ctrl+R`
-
------
-
-## Credenciales para Pruebas
-
-```
-Email: usuario@example.com
-Password: password123
-Rol: cliente
-```
-
-O crea una nueva cuenta durante el registro.
-
------
-
-## Diseño Visual
-
-- **Material Design 3** con colores consistentes
-- **Componentes reutilizables** (Loading, Error, Empty screens)
-- **Transiciones suaves** entre pantallas (fade, slide)
-- **Tipografía escalable** con estilos predefinidos
-- **Espaciado uniforme** basado en Material Design
-
------
-
-## API Base
-
-```
-https://x8ki-letl-twmt.n7.xano.io/api:Rfm_61dW/
-```
-
-### Endpoints Principales
-
-| Método | Endpoint | Autenticación |
-|--------|----------|---|
-| POST | `/auth/login` | No |
-| POST | `/auth/signup` | No |
-| GET | `/auth/me` | Sí |
-| GET | `/servicios` | Sí |
-
------
-
-## Flujo de Usuario
-
-### Cliente
-
-1.  Login → HomeCliente
-2.  Visualiza sus servicios solicitados
-3.  Perfil: ver/editar datos y foto
-
-### Técnico
-
-1.  Login → HomeTecnico
-2.  Visualiza servicios disponibles
-3.  Perfil: ver datos y foto
+- **HomeTecnicoScreen:** Bandeja de entrada de servicios disponibles
+- **SolicitudServicioScreen:** Formulario para pedir reparación
+- **PerfilScreen:** Datos del usuario, cierre de sesión y foto
 
 -----
 
 ## Animaciones de Transición
 
 La aplicación implementa transiciones suaves entre pantallas:
-
 - Fade In/Out: Al transicionar entre Login y Registro (300ms)
 - Slide In/Out: Al navegar desde HomeCliente a Perfil (300ms)
 - AnimatedVisibility: Mensajes de error y éxito aparecen con animación
@@ -174,38 +119,28 @@ La aplicación implementa transiciones suaves entre pantallas:
 
 ```kotlin
 // API
-implementation 'com.squareup.retrofit2:retrofit:2.9.0'
-implementation 'com.squareup.retrofit2:converter-gson:2.9.0'
+implementation("com.squareup.retrofit2:retrofit:2.9.0")
+implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
 
 // Persistencia
-implementation 'androidx.datastore:datastore-preferences:1.0.0'
+implementation("androidx.datastore:datastore-preferences:1.0.0")
 
 // UI
-implementation 'androidx.compose.ui:ui'
-implementation 'androidx.compose.material3:material3'
-implementation 'io.coil-kt:coil-compose:2.5.0'
+implementation("androidx.compose.ui:ui")
+implementation("androidx.compose.material3:material3")
+implementation("io.coil-kt:coil-compose:2.5.0")
 
 // Navegación
-implementation 'androidx.navigation:navigation-compose:2.7.7'
+implementation("androidx.navigation:navigation-compose:2.7.7")
+
+// Testing
+testImplementation("junit:junit:4.13.2")
+testImplementation("io.mockk:mockk:1.13.10")
+testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+testImplementation("androidx.arch.core:core-testing:2.2.0")
 
 // Otros
-implementation 'androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0'
-implementation 'com.google.accompanist:accompanist-permissions:0.32.0'
-implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
-```
-
------
-
-## Notas
-
-- La aplicación automáticamente redirige según el rol del usuario (cliente vs técnico)
-- Los datos se persisten en DataStore entre reinicios
-- Las fotos se guardan localmente y se recuperan con Coil
-- Todos los formularios validan antes de enviar
-- Los errores se muestran con transiciones suaves
-
------
-
-## Autor
-
-Grupo 8 - Proyecto ReparaFácil - Rodrigo Martínez Becker & Vincent Farenden
+implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
+implementation("com.google.accompanist:accompanist-permissions:0.32.0")
+implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
