@@ -6,11 +6,11 @@ plugins {
 
 android {
     namespace = "com.grupo8.reparafacil"
-    compileSdk = 34 // Ajustado a una versión estable común, puedes mantener 36 si tu entorno lo requiere
+    compileSdk = 34
 
     defaultConfig {
         applicationId = "com.grupo8.reparafacil"
-        minSdk = 26 // Ajustado a un mínimo razonable para Compose, puedes mantener 33 si prefieres
+        minSdk = 26
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
@@ -21,8 +21,22 @@ android {
         }
     }
 
+    // 1. CONFIGURACIÓN DE FIRMA (NUEVO)
+    signingConfigs {
+        create("release") {
+            // El archivo keystore.jks debe estar en la carpeta 'app/'
+            storeFile = file("keystore.jks")
+            storePassword = "123456"
+            keyAlias = "key0"
+            keyPassword = "123456"
+        }
+    }
+
     buildTypes {
         release {
+            // 2. VINCULAR LA FIRMA AL BUILD RELEASE (NUEVO)
+            signingConfig = signingConfigs.getByName("release")
+
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -30,6 +44,7 @@ android {
             )
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
@@ -51,35 +66,31 @@ android {
 }
 
 dependencies {
-    // Core Android
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
     implementation("androidx.activity:activity-compose:1.8.2")
-
-    // Compose BOM
-    implementation(platform("androidx.compose:compose-bom:2024.02.00"))
+    implementation(platform("androidx.compose:compose-bom:2023.08.00"))
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
-    implementation("androidx.compose.material:material-icons-extended")
 
-    // Navigation Compose
+    // Navigation
     implementation("androidx.navigation:navigation-compose:2.7.7")
 
-    // ViewModel Compose
+    // Lifecycle
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.7.0")
 
-    // DataStore (persistencia local)
+    // DataStore
     implementation("androidx.datastore:datastore-preferences:1.0.0")
 
-    // Retrofit (consumo de API)
+    // Retrofit & Gson
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
 
-    // Coil (carga de imágenes desde URI)
+    // Coil
     implementation("io.coil-kt:coil-compose:2.5.0")
 
     // Accompanist Permissions
@@ -88,21 +99,17 @@ dependencies {
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 
-    // --- TESTING ---
+    // Testing
     testImplementation("junit:junit:4.13.2")
-
-    // Dependencias agregadas para MockK y pruebas de corrutinas (Requerido para IL3.2)
     testImplementation("io.mockk:mockk:1.13.10")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
     testImplementation("androidx.arch.core:core-testing:2.2.0")
 
-    // Android Tests
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
-    androidTestImplementation(platform("androidx.compose:compose-bom:2024.02.00"))
+    androidTestImplementation(platform("androidx.compose:compose-bom:2023.08.00"))
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
 
-    // Debug
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 }
