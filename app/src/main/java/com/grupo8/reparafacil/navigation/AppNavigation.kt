@@ -40,6 +40,9 @@ fun AppNavigation(
                 onNavigateToRegistro = {
                     navController.navigate(AppRoutes.Registro)
                 },
+                onNavigateToRecuperar = {
+                    navController.navigate(AppRoutes.RecuperarPassword)
+                },
                 onNavigateToHome = { rol ->
                     val route = if (rol == "tecnico") {
                         AppRoutes.HomeTecnico
@@ -49,6 +52,15 @@ fun AppNavigation(
                     navController.navigate(route) {
                         popUpTo(AppRoutes.Login) { inclusive = true }
                     }
+                }
+            )
+        }
+
+        // Pantalla de Recuperación de Contraseña (NUEVA)
+        composable(AppRoutes.RecuperarPassword) {
+            RecuperarPasswordScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
                 }
             )
         }

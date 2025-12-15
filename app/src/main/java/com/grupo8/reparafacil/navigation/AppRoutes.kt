@@ -7,4 +7,6 @@ object AppRoutes {
     const val HomeTecnico = "home_tecnico"
     const val Perfil = "perfil"
     const val SolicitudServicio = "solicitud_servicio"
+
+    const val RecuperarPassword = "recuperar_password"
 }

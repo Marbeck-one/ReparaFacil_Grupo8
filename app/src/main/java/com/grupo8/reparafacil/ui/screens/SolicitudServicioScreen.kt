@@ -1,5 +1,8 @@
 package com.grupo8.reparafacil.ui.screens
 
+import android.Manifest // Import necesario
+import androidx.activity.compose.rememberLauncherForActivityResult // Import necesario
+import androidx.activity.result.contract.ActivityResultContracts // Import necesario
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -11,6 +14,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext // Import necesario
 import androidx.compose.ui.unit.dp
 import com.grupo8.reparafacil.viewmodel.ServiciosViewModel
 
@@ -25,7 +29,6 @@ fun SolicitudServicioScreen(
     val solicitudErrores by serviciosViewModel.solicitudErrores.collectAsState()
 
     // Variable para saber si el usuario ya intentó enviar el formulario.
-    // Esto evita que la pantalla se cierre sola o muestre "Éxito" apenas entras.
     var formularioEnviado by rememberSaveable { mutableStateOf(false) }
 
     var expandedTipo by remember { mutableStateOf(false) }
@@ -51,8 +54,6 @@ fun SolicitudServicioScreen(
             solicitudState.tipo.isEmpty() &&
             solicitudState.descripcion.isEmpty()) {
 
-            // Esperamos un momento breve para que el usuario vea el mensaje de éxito antes de salir
-            // (Opcional, pero se ve mejor)
             kotlinx.coroutines.delay(1500)
             onServicioCreado()
         }
@@ -178,7 +179,23 @@ fun SolicitudServicioScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Dirección
+            // --- INICIO BLOQUE DIRECCIÓN CON GPS ---
+            val context = LocalContext.current
+
+            // Lanzador de permisos (pide Fine y Coarse location)
+            val locationPermissionLauncher = rememberLauncherForActivityResult(
+                contract = ActivityResultContracts.RequestMultiplePermissions()
+            ) { permissions ->
+                val isGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+                        permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+
+                if (isGranted) {
+                    serviciosViewModel.obtenerUbicacionActual(context)
+                } else {
+                    // Opcional: Manejar denegación
+                }
+            }
+
             OutlinedTextField(
                 value = solicitudState.direccion,
                 onValueChange = { serviciosViewModel.actualizarDireccion(it) },
@@ -186,16 +203,36 @@ fun SolicitudServicioScreen(
                 leadingIcon = {
                     Icon(Icons.Default.LocationOn, contentDescription = "Dirección")
                 },
+                // AGREGAMOS EL BOTÓN DE GPS A LA DERECHA
+                trailingIcon = {
+                    IconButton(onClick = {
+                        locationPermissionLauncher.launch(
+                            arrayOf(
+                                Manifest.permission.ACCESS_FINE_LOCATION,
+                                Manifest.permission.ACCESS_COARSE_LOCATION
+                            )
+                        )
+                    }) {
+                        Icon(
+                            Icons.Default.MyLocation, // Ícono de mira/gps
+                            contentDescription = "Usar ubicación actual",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                },
                 isError = solicitudErrores.direccionError != null,
                 supportingText = {
                     if (solicitudErrores.direccionError != null) {
                         Text(solicitudErrores.direccionError!!)
+                    } else {
+                        Text("Ingresa manual o usa el botón GPS")
                     }
                 },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !solicitudState.isLoading
             )
+            // --- FIN BLOQUE DIRECCIÓN ---
 
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -251,7 +288,7 @@ fun SolicitudServicioScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Animación de éxito (También controlada por formularioEnviado)
+            // Animación de éxito
             AnimatedVisibility(
                 visible = formularioEnviado &&
                         !solicitudState.isLoading &&

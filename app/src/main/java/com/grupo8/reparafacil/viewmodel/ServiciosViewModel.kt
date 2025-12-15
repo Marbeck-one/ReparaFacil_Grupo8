@@ -1,8 +1,10 @@
 package com.grupo8.reparafacil.viewmodel
 
 import android.app.Application
+import android.content.Context // Import necesario
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.android.gms.location.LocationServices // Import necesario
 import com.grupo8.reparafacil.model.*
 import com.grupo8.reparafacil.repository.ServiciosRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -106,6 +108,31 @@ class ServiciosViewModel @JvmOverloads constructor(
     fun actualizarDireccion(direccion: String) {
         _solicitudState.value = _solicitudState.value.copy(direccion = direccion)
         _solicitudErrores.value = _solicitudErrores.value.copy(direccionError = null)
+    }
+
+    // --- NUEVA FUNCIÓN PARA GPS ---
+    fun obtenerUbicacionActual(context: Context) {
+        try {
+            val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
+            fusedLocationClient.lastLocation.addOnSuccessListener { location ->
+                if (location != null) {
+                    val coordenadas = "Lat: ${location.latitude}, Long: ${location.longitude}"
+                    actualizarDireccion(coordenadas)
+                } else {
+                    _solicitudErrores.value = _solicitudErrores.value.copy(
+                        direccionError = "No se pudo obtener la ubicación. Activa el GPS."
+                    )
+                }
+            }.addOnFailureListener {
+                _solicitudErrores.value = _solicitudErrores.value.copy(
+                    direccionError = "Error al obtener ubicación."
+                )
+            }
+        } catch (e: SecurityException) {
+            _solicitudErrores.value = _solicitudErrores.value.copy(
+                direccionError = "Faltan permisos de ubicación."
+            )
+        }
     }
 
     fun validarYCrearServicio() {

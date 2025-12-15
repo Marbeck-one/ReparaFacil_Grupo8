@@ -24,6 +24,7 @@ import com.grupo8.reparafacil.viewmodel.AuthViewModel
 fun LoginScreen(
     authViewModel: AuthViewModel,
     onNavigateToRegistro: () -> Unit,
+    onNavigateToRecuperar: () -> Unit, // Nuevo parámetro
     onNavigateToHome: (String) -> Unit
 ) {
     var email by remember { mutableStateOf("") }
@@ -32,7 +33,7 @@ fun LoginScreen(
 
     val loginState by authViewModel.loginState.collectAsState()
 
-// Manejar navegación cuando login es exitoso
+    // Manejar navegación cuando login es exitoso
     LaunchedEffect(loginState) {
         if (loginState is UiState.Success) {
             val authResponse = (loginState as UiState.Success).data
@@ -121,7 +122,14 @@ fun LoginScreen(
                 enabled = loginState !is UiState.Loading
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
+            // Botón Recuperar Contraseña (Nuevo)
+            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
+                TextButton(onClick = onNavigateToRecuperar) {
+                    Text("¿Olvidaste tu contraseña?")
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
 
             // Botón Login
             Button(

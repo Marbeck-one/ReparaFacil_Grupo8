@@ -16,6 +16,8 @@ import com.grupo8.reparafacil.model.UiState
 import com.grupo8.reparafacil.ui.components.EmptyStateScreen
 import com.grupo8.reparafacil.ui.components.ErrorScreen
 import com.grupo8.reparafacil.ui.components.LoadingScreen
+// IMPORTANTE: Importamos el nuevo widget
+import com.grupo8.reparafacil.ui.components.WeatherWidget
 import com.grupo8.reparafacil.viewmodel.AuthViewModel
 import com.grupo8.reparafacil.viewmodel.ServiciosViewModel
 
@@ -32,7 +34,7 @@ fun HomeClienteScreen(
 
     // Estados del ViewModel (Original y Filtrados)
     val serviciosState by serviciosViewModel.serviciosState.collectAsState()
-    val serviciosFiltrados by serviciosViewModel.serviciosFiltrados.collectAsState() // Asegúrate de tener esto en el VM
+    val serviciosFiltrados by serviciosViewModel.serviciosFiltrados.collectAsState()
     val searchQuery by serviciosViewModel.busquedaQuery.collectAsState()
     val activeFilter by serviciosViewModel.filtroEstado.collectAsState()
 
@@ -108,6 +110,9 @@ fun HomeClienteScreen(
                 .padding(paddingValues)
                 .fillMaxSize()
         ) {
+            // --- NUEVO: WIDGET DEL CLIMA ---
+            WeatherWidget()
+
             // --- SECCIÓN DE FILTROS (Solo si hay datos cargados con éxito) ---
             if (serviciosState is UiState.Success && (serviciosState as UiState.Success).data.isNotEmpty()) {
                 Column(
@@ -167,7 +172,7 @@ fun HomeClienteScreen(
                 is UiState.Success -> {
                     // Verificar si la lista FILTRADA está vacía
                     if (serviciosFiltrados.isEmpty()) {
-                        // Caso 1: No hay servicios en absoluto (ni siquiera en la lista original)
+                        // Caso 1: No hay servicios en absoluto
                         if ((serviciosState as UiState.Success).data.isEmpty()) {
                             EmptyStateScreen(
                                 modifier = Modifier.fillMaxSize(),
