@@ -9,9 +9,7 @@
 -----
 
 ## Descripción General
-
-ReparaFácil permite que clientes soliciten reparaciones y técnicos visualicen servicios disponibles. Cada usuario tiene un rol específico (cliente o técnico) que determina el flujo de la aplicación. La aplicación consume una API REST desplegada en Render y cuenta con validación de calidad mediante pruebas unitarias.
-
+ReparaFácil permite la gestión integral de servicios técnicos. La arquitectura soporta **4 roles de usuario diferenciados** (Cliente, Técnico, Administrador y Soporte), cada uno con flujos de navegación y permisos exclusivos. La aplicación consume una API REST propia y servicios externos, asegurando calidad mediante pruebas unitarias.
 -----
 
 ## Stack Tecnológico
@@ -60,6 +58,15 @@ La aplicación se conecta a un servidor remoto desplegado en Render.
 * `POST /api/reparacion`: Creación de solicitudes.
 * `PATCH /api/reparacion/{id}`: Actualización de estados por técnicos.
 
+* ## 📱 Recursos Nativos y API Externa
+
+La aplicación implementa funcionalidades avanzadas del dispositivo e integraciones de terceros:
+
+* **Geolocalización (GPS):** Obtención automática de coordenadas (Latitud/Longitud) al solicitar un servicio.
+* **Cámara y Almacenamiento:** Gestión de permisos para evidencia fotográfica.
+* **API Externa (Clima):** Consumo de **Open-Meteo API** para mostrar condiciones climáticas en tiempo real a los técnicos.
+    * *Endpoint:* `https://api.open-meteo.com/v1/forecast`
+
 -----
 
 ## 🧪 Calidad y Pruebas Unitarias
@@ -87,22 +94,18 @@ Se ha generado el ejecutable firmado para producción:
 
 -----
 
-## Funcionalidades Implementadas
+### Funcionalidades Implementadas
 
-### Autenticación
-- Login con validación de email y password (≥6 caracteres)
-- Registro de nuevos usuarios (cliente o técnico)
-- Token JWT persistido en DataStore
-- Sesión automática al reiniciar app
+### Autenticación y Seguridad
+- Login y Registro con validación de roles.
+- **Recuperación de Contraseña:** Flujo visual para restablecer credenciales.
+- Token JWT persistido de forma segura.
 
-### Navegación
-- **LoginScreen:** Acceso a la aplicación
-- **RegistroScreen:** Crear nueva cuenta
-- **HomeClienteScreen:** Lista de servicios solicitados
-- **HomeTecnicoScreen:** Bandeja de entrada de servicios disponibles
-- **SolicitudServicioScreen:** Formulario para pedir reparación
-- **PerfilScreen:** Datos del usuario, cierre de sesión y foto
-
+### Módulos por Rol
+- **Cliente:** Solicitud de reparaciones con ubicación GPS.
+- **Técnico:** Gestión de estados de servicio.
+- **Administrador:** Panel de auditoría con capacidad de eliminar registros (CRUD completo).
+- **Soporte:** Dashboard de monitoreo de estado del sistema.
 -----
 
 ## Animaciones de Transición
