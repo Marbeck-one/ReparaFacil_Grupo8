@@ -29,8 +29,9 @@ fun HomeSoporteScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.tertiaryContainer, // Color distintivo
-                    titleContentColor = MaterialTheme.colorScheme.onTertiaryContainer
+                    containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                    titleContentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                    actionIconContentColor = MaterialTheme.colorScheme.onTertiaryContainer
                 )
             )
         }
@@ -49,10 +50,9 @@ fun HomeSoporteScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Tarjetas de estado simuladas
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                EstadoCard("API", "Online", true, Modifier.weight(1f))
-                EstadoCard("DB", "Estable", true, Modifier.weight(1f))
+                EstadoCard("API REST", "Online", true, Modifier.weight(1f))
+                EstadoCard("Base de Datos", "Estable", true, Modifier.weight(1f))
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -60,14 +60,15 @@ fun HomeSoporteScreen(
             Text("Tickets de Incidencia", style = MaterialTheme.typography.titleMedium)
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Lista simulada
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(3) { i ->
                     OutlinedCard {
                         ListItem(
                             headlineContent = { Text("Ticket #00${i + 1}") },
                             supportingContent = { Text("Error de conexión reportado por usuario.") },
-                            leadingContent = { Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error) }
+                            leadingContent = {
+                                Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+                            }
                         )
                     }
                 }

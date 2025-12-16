@@ -29,8 +29,9 @@ fun HomeAdminScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.errorContainer, // Color distintivo para Admin
-                    titleContentColor = MaterialTheme.colorScheme.onErrorContainer
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                    titleContentColor = MaterialTheme.colorScheme.onErrorContainer,
+                    actionIconContentColor = MaterialTheme.colorScheme.onErrorContainer
                 )
             )
         }
@@ -62,8 +63,12 @@ fun HomeAdminScreen(
             Text("Herramientas de Gestión", style = MaterialTheme.typography.titleMedium)
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Lista simulada de opciones administrativas
-            val opciones = listOf("Gestionar Usuarios", "Auditoría de Servicios", "Reportes Financieros", "Configuración Global")
+            val opciones = listOf(
+                "Gestionar Usuarios",
+                "Auditoría de Servicios",
+                "Reportes Financieros",
+                "Configuración Global"
+            )
 
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(opciones.size) { index ->

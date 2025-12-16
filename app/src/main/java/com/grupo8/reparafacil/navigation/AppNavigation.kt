@@ -22,7 +22,7 @@ fun AppNavigation(
 ) {
     val usuarioActual by authViewModel.usuarioActual.collectAsState()
 
-    // Lógica de inicio según Rol
+    // Determinar ruta inicial según rol
     val startDestination = when {
         usuarioActual == null -> AppRoutes.Login
         usuarioActual?.rol == "tecnico" -> AppRoutes.HomeTecnico
@@ -46,7 +46,7 @@ fun AppNavigation(
                     navController.navigate(AppRoutes.RecuperarPassword)
                 },
                 onNavigateToHome = { rol ->
-                    // Redirección inteligente según el rol que venga del Login
+                    // Redirección inteligente al login
                     val route = when (rol) {
                         "tecnico" -> AppRoutes.HomeTecnico
                         "admin" -> AppRoutes.HomeAdmin
@@ -77,8 +77,8 @@ fun AppNavigation(
                     navController.popBackStack()
                 },
                 onRegistroExitoso = {
-                    // Redirección post-registro (por defecto Cliente o Técnico)
                     val usuario = authViewModel.usuarioActual.value
+                    // Por defecto el registro solo crea clientes o técnicos
                     val route = if (usuario?.rol == "tecnico") {
                         AppRoutes.HomeTecnico
                     } else {
@@ -91,7 +91,7 @@ fun AppNavigation(
             )
         }
 
-        // Homes existentes
+        // Home Cliente
         composable(AppRoutes.HomeCliente) {
             HomeClienteScreen(
                 authViewModel = authViewModel,
@@ -104,6 +104,7 @@ fun AppNavigation(
             )
         }
 
+        // Home Técnico
         composable(AppRoutes.HomeTecnico) {
             HomeTecnicoScreen(
                 authViewModel = authViewModel,
@@ -135,7 +136,7 @@ fun AppNavigation(
             )
         }
 
-        // Pantallas comunes
+        // Pantallas Comunes
         composable(AppRoutes.Perfil) {
             PerfilScreen(
                 perfilViewModel = perfilViewModel,
