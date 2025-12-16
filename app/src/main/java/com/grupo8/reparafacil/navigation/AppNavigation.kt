@@ -22,10 +22,12 @@ fun AppNavigation(
 ) {
     val usuarioActual by authViewModel.usuarioActual.collectAsState()
 
-    // Determinar ruta inicial
+    // Lógica de inicio según Rol
     val startDestination = when {
         usuarioActual == null -> AppRoutes.Login
         usuarioActual?.rol == "tecnico" -> AppRoutes.HomeTecnico
+        usuarioActual?.rol == "admin" -> AppRoutes.HomeAdmin
+        usuarioActual?.rol == "soporte" -> AppRoutes.HomeSoporte
         else -> AppRoutes.HomeCliente
     }
 
@@ -44,10 +46,12 @@ fun AppNavigation(
                     navController.navigate(AppRoutes.RecuperarPassword)
                 },
                 onNavigateToHome = { rol ->
-                    val route = if (rol == "tecnico") {
-                        AppRoutes.HomeTecnico
-                    } else {
-                        AppRoutes.HomeCliente
+                    // Redirección inteligente según el rol que venga del Login
+                    val route = when (rol) {
+                        "tecnico" -> AppRoutes.HomeTecnico
+                        "admin" -> AppRoutes.HomeAdmin
+                        "soporte" -> AppRoutes.HomeSoporte
+                        else -> AppRoutes.HomeCliente
                     }
                     navController.navigate(route) {
                         popUpTo(AppRoutes.Login) { inclusive = true }
@@ -56,7 +60,7 @@ fun AppNavigation(
             )
         }
 
-        // Pantalla de Recuperación de Contraseña (NUEVA)
+        // Pantalla de Recuperación
         composable(AppRoutes.RecuperarPassword) {
             RecuperarPasswordScreen(
                 onNavigateBack = {
@@ -73,6 +77,7 @@ fun AppNavigation(
                     navController.popBackStack()
                 },
                 onRegistroExitoso = {
+                    // Redirección post-registro (por defecto Cliente o Técnico)
                     val usuario = authViewModel.usuarioActual.value
                     val route = if (usuario?.rol == "tecnico") {
                         AppRoutes.HomeTecnico
@@ -86,62 +91,64 @@ fun AppNavigation(
             )
         }
 
-        // Pantalla Home Cliente
+        // Homes existentes
         composable(AppRoutes.HomeCliente) {
             HomeClienteScreen(
                 authViewModel = authViewModel,
                 serviciosViewModel = serviciosViewModel,
-                onNavigateToPerfil = {
-                    navController.navigate(AppRoutes.Perfil)
-                },
-                onNavigateToSolicitud = {
-                    navController.navigate(AppRoutes.SolicitudServicio)
-                },
+                onNavigateToPerfil = { navController.navigate(AppRoutes.Perfil) },
+                onNavigateToSolicitud = { navController.navigate(AppRoutes.SolicitudServicio) },
                 onLogout = {
-                    navController.navigate(AppRoutes.Login) {
-                        popUpTo(0) { inclusive = true }
-                    }
+                    navController.navigate(AppRoutes.Login) { popUpTo(0) { inclusive = true } }
                 }
             )
         }
 
-        // Pantalla Home Técnico
         composable(AppRoutes.HomeTecnico) {
             HomeTecnicoScreen(
                 authViewModel = authViewModel,
                 serviciosViewModel = serviciosViewModel,
-                onNavigateToPerfil = {
-                    navController.navigate(AppRoutes.Perfil)
-                },
+                onNavigateToPerfil = { navController.navigate(AppRoutes.Perfil) },
                 onLogout = {
-                    navController.navigate(AppRoutes.Login) {
-                        popUpTo(0) { inclusive = true }
-                    }
+                    navController.navigate(AppRoutes.Login) { popUpTo(0) { inclusive = true } }
                 }
             )
         }
 
-        // Pantalla de Perfil
+        // NUEVO: Home Admin
+        composable(AppRoutes.HomeAdmin) {
+            HomeAdminScreen(
+                authViewModel = authViewModel,
+                onLogout = {
+                    navController.navigate(AppRoutes.Login) { popUpTo(0) { inclusive = true } }
+                }
+            )
+        }
+
+        // NUEVO: Home Soporte
+        composable(AppRoutes.HomeSoporte) {
+            HomeSoporteScreen(
+                authViewModel = authViewModel,
+                onLogout = {
+                    navController.navigate(AppRoutes.Login) { popUpTo(0) { inclusive = true } }
+                }
+            )
+        }
+
+        // Pantallas comunes
         composable(AppRoutes.Perfil) {
             PerfilScreen(
                 perfilViewModel = perfilViewModel,
                 authViewModel = authViewModel,
-                onNavigateBack = {
-                    navController.popBackStack()
-                }
+                onNavigateBack = { navController.popBackStack() }
             )
         }
 
-        // Pantalla de Solicitud de Servicio
         composable(AppRoutes.SolicitudServicio) {
             SolicitudServicioScreen(
                 serviciosViewModel = serviciosViewModel,
-                onNavigateBack = {
-                    navController.popBackStack()
-                },
-                onServicioCreado = {
-                    navController.popBackStack()
-                }
+                onNavigateBack = { navController.popBackStack() },
+                onServicioCreado = { navController.popBackStack() }
             )
         }
     }
