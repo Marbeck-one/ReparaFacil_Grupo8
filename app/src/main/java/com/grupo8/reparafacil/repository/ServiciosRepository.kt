@@ -5,7 +5,6 @@ import com.grupo8.reparafacil.data.DataStoreManager
 import com.grupo8.reparafacil.model.Servicio
 import com.grupo8.reparafacil.model.ServicioRequest
 import com.grupo8.reparafacil.network.ApiService
-// AGREGAMOS ESTOS IMPORTS PARA QUE RECONOZCA LA RESPUESTA
 import com.grupo8.reparafacil.network.GenericResponse
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -32,13 +31,10 @@ class ServiciosRepository(private val context: Context) {
                 direccion = direccion
             )
 
-            // Si ApiService no se ha actualizado en el build, esto marcará error.
-            // Asegúrate de hacer "Clean Project"
             val response = apiService.crearServicio("Bearer $token", body)
 
             if (response.isSuccessful && response.body() != null) {
                 val apiResponse = response.body()!!
-                // apiResponse es GenericResponse<Servicio>
                 if (apiResponse.success) {
                     Result.success(apiResponse.data)
                 } else {
@@ -52,16 +48,14 @@ class ServiciosRepository(private val context: Context) {
         }
     }
 
-    // ========== ACTUALIZAR ESTADO (NUEVO) ==========
+    // ========== ACTUALIZAR ESTADO ==========
     suspend fun actualizarEstado(id: String, nuevoEstado: String): Result<Servicio> {
         return try {
             val token = DataStoreManager.obtenerToken(context).first()
                 ?: return Result.failure(Exception("No estás autenticado"))
 
-            // Preparamos el cuerpo solo con el campo que cambia
             val body = mapOf("estado" to nuevoEstado)
 
-            // Llama a la función definida en ApiService.kt
             val response = apiService.actualizarServicio("Bearer $token", id, body)
 
             if (response.isSuccessful && response.body() != null) {
@@ -86,7 +80,6 @@ class ServiciosRepository(private val context: Context) {
             if (token != null) {
                 val response = apiService.obtenerServicios("Bearer $token")
                 if (response.isSuccessful && response.body() != null) {
-                    // response.body() es GenericListResponse<Servicio>
                     emit(response.body()!!.data)
                 } else {
                     emit(emptyList())
@@ -97,6 +90,24 @@ class ServiciosRepository(private val context: Context) {
         } catch (e: Exception) {
             e.printStackTrace()
             emit(emptyList())
+        }
+    }
+
+    // ========== ELIMINAR SERVICIO (ADMIN) ==========
+    suspend fun eliminarServicio(id: String): Result<Boolean> {
+        return try {
+            val token = DataStoreManager.obtenerToken(context).first()
+                ?: return Result.failure(Exception("No autenticado"))
+
+            val response = apiService.eliminarServicio("Bearer $token", id)
+
+            if (response.isSuccessful) {
+                Result.success(true)
+            } else {
+                Result.failure(Exception(response.message()))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
         }
     }
 }

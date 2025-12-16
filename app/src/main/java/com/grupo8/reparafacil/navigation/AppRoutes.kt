@@ -7,8 +7,10 @@ object AppRoutes {
 
     const val HomeCliente = "home_cliente"
     const val HomeTecnico = "home_tecnico"
-    const val HomeAdmin = "home_admin"     // NUEVO
-    const val HomeSoporte = "home_soporte" // NUEVO
+    const val HomeAdmin = "home_admin"
+    const val HomeSoporte = "home_soporte"
+
+    const val AdminAudit = "admin_audit"
 
     const val Perfil = "perfil"
     const val SolicitudServicio = "solicitud_servicio"

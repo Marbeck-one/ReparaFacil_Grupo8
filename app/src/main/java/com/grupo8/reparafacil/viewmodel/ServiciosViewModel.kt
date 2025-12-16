@@ -1,10 +1,10 @@
 package com.grupo8.reparafacil.viewmodel
 
 import android.app.Application
-import android.content.Context // Import necesario
+import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.android.gms.location.LocationServices // Import necesario
+import com.google.android.gms.location.LocationServices
 import com.grupo8.reparafacil.model.*
 import com.grupo8.reparafacil.repository.ServiciosRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,16 +15,13 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-// Usamos @JvmOverloads para permitir la inyección del repositorio mock en los tests
 class ServiciosViewModel @JvmOverloads constructor(
     application: Application,
     private val testRepository: ServiciosRepository? = null
 ) : AndroidViewModel(application) {
 
-    // Si testRepository es null (app real), crea uno nuevo. Si no (test), usa el mock.
     private val repository = testRepository ?: ServiciosRepository(application.applicationContext)
 
-    // ... (El resto de tus estados se mantienen igual) ...
     private val _serviciosState = MutableStateFlow<UiState<List<Servicio>>>(UiState.Idle)
     val serviciosState: StateFlow<UiState<List<Servicio>>> = _serviciosState.asStateFlow()
 
@@ -67,7 +64,6 @@ class ServiciosViewModel @JvmOverloads constructor(
         cargarServicios()
     }
 
-    // Funciones
     fun onBusquedaChange(text: String) { _busquedaQuery.value = text }
     fun onFiltroEstadoChange(estado: String) { _filtroEstado.value = estado }
 
@@ -80,12 +76,9 @@ class ServiciosViewModel @JvmOverloads constructor(
         }
     }
 
-    // ESTA ES LA FUNCIÓN QUE DABA PROBLEMAS
-    // Asegúrate de que repository.actualizarEstado exista en ServiciosRepository.kt
     fun cambiarEstadoServicio(servicioId: String, nuevoEstado: String) {
         viewModelScope.launch {
             val result = repository.actualizarEstado(servicioId, nuevoEstado)
-
             result.onSuccess {
                 cargarServicios()
             }.onFailure { e ->
@@ -94,7 +87,6 @@ class ServiciosViewModel @JvmOverloads constructor(
         }
     }
 
-    // ... (Funciones de validación y creación siguen igual) ...
     fun actualizarTipo(tipo: String) {
         _solicitudState.value = _solicitudState.value.copy(tipo = tipo)
         _solicitudErrores.value = _solicitudErrores.value.copy(tipoError = null)
@@ -110,7 +102,6 @@ class ServiciosViewModel @JvmOverloads constructor(
         _solicitudErrores.value = _solicitudErrores.value.copy(direccionError = null)
     }
 
-    // --- NUEVA FUNCIÓN PARA GPS ---
     fun obtenerUbicacionActual(context: Context) {
         try {
             val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
@@ -171,6 +162,18 @@ class ServiciosViewModel @JvmOverloads constructor(
                 cargarServicios()
             }.onFailure { e ->
                 _solicitudErrores.value = _solicitudErrores.value.copy(descripcionError = "Error: ${e.message}")
+            }
+        }
+    }
+
+    // --- NUEVO PARA AUDITORÍA ---
+    fun eliminarServicio(id: String) {
+        viewModelScope.launch {
+            val result = repository.eliminarServicio(id)
+            result.onSuccess {
+                cargarServicios()
+            }.onFailure { e ->
+                e.printStackTrace()
             }
         }
     }

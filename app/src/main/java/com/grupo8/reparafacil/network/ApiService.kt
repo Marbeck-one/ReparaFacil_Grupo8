@@ -27,8 +27,6 @@ data class GenericListResponse<T>(
     val total: Int? = null
 )
 
-// NOTA: Borramos 'data class UploadResponse' de aquí porque ya está en UploadResponse.kt
-
 // ========== MODELOS DE REQUEST ==========
 
 data class UpdatePhotoRequest(val fotoPerfil: String)
@@ -96,6 +94,13 @@ interface ApiService {
         @Path("id") id: String,
         @Body body: Map<String, String>
     ): Response<GenericResponse<Servicio>>
+
+    // --- NUEVO: ELIMINAR SERVICIO (ADMIN) ---
+    @DELETE("api/reparacion/{id}")
+    suspend fun eliminarServicio(
+        @Header("Authorization") token: String,
+        @Path("id") id: String
+    ): Response<GenericResponse<Any>>
 
     companion object {
         private const val BASE_URL = "https://reparafacil-api.onrender.com/"

@@ -46,7 +46,6 @@ fun AppNavigation(
                     navController.navigate(AppRoutes.RecuperarPassword)
                 },
                 onNavigateToHome = { rol ->
-                    // Redirección inteligente al login
                     val route = when (rol) {
                         "tecnico" -> AppRoutes.HomeTecnico
                         "admin" -> AppRoutes.HomeAdmin
@@ -78,7 +77,6 @@ fun AppNavigation(
                 },
                 onRegistroExitoso = {
                     val usuario = authViewModel.usuarioActual.value
-                    // Por defecto el registro solo crea clientes o técnicos
                     val route = if (usuario?.rol == "tecnico") {
                         AppRoutes.HomeTecnico
                     } else {
@@ -91,7 +89,7 @@ fun AppNavigation(
             )
         }
 
-        // Home Cliente
+        // Homes
         composable(AppRoutes.HomeCliente) {
             HomeClienteScreen(
                 authViewModel = authViewModel,
@@ -104,7 +102,6 @@ fun AppNavigation(
             )
         }
 
-        // Home Técnico
         composable(AppRoutes.HomeTecnico) {
             HomeTecnicoScreen(
                 authViewModel = authViewModel,
@@ -116,17 +113,27 @@ fun AppNavigation(
             )
         }
 
-        // NUEVO: Home Admin
+        // --- HOME ADMIN CON NAVEGACIÓN A AUDITORÍA ---
         composable(AppRoutes.HomeAdmin) {
             HomeAdminScreen(
                 authViewModel = authViewModel,
                 onLogout = {
                     navController.navigate(AppRoutes.Login) { popUpTo(0) { inclusive = true } }
+                },
+                onNavigateToAudit = {
+                    navController.navigate(AppRoutes.AdminAudit)
                 }
             )
         }
 
-        // NUEVO: Home Soporte
+        // --- PANTALLA DE AUDITORÍA (NUEVA) ---
+        composable(AppRoutes.AdminAudit) {
+            AdminAuditScreen(
+                viewModel = serviciosViewModel,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
         composable(AppRoutes.HomeSoporte) {
             HomeSoporteScreen(
                 authViewModel = authViewModel,

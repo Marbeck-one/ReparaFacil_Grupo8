@@ -14,7 +14,8 @@ import com.grupo8.reparafacil.viewmodel.AuthViewModel
 @Composable
 fun HomeAdminScreen(
     authViewModel: AuthViewModel,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    onNavigateToAudit: () -> Unit // Nuevo parámetro
 ) {
     Scaffold(
         topBar = {
@@ -72,9 +73,17 @@ fun HomeAdminScreen(
 
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(opciones.size) { index ->
-                    ElevatedCard(onClick = { /* Acción simulada */ }) {
+                    val titulo = opciones[index]
+                    ElevatedCard(
+                        onClick = {
+                            // Si es Auditoría, navegamos
+                            if (titulo == "Auditoría de Servicios") {
+                                onNavigateToAudit()
+                            }
+                        }
+                    ) {
                         ListItem(
-                            headlineContent = { Text(opciones[index]) },
+                            headlineContent = { Text(titulo) },
                             leadingContent = { Icon(Icons.Default.Settings, contentDescription = null) },
                             trailingContent = { Icon(Icons.Default.ChevronRight, contentDescription = null) }
                         )

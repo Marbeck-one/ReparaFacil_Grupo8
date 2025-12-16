@@ -4,7 +4,9 @@ import com.google.gson.annotations.SerializedName
 
 data class Servicio(
     @SerializedName("_id") val id: String = "",
-    val clienteId: String = "", // This is fine for READING responses
+    // CORRECCIÓN: Mapeamos 'usuario' como Objeto Usuario (para recibir el populate del backend)
+    // Esto arregla el error de "Unresolved reference: usuario" en AdminAuditScreen
+    val usuario: Usuario? = null,
     val tecnicoId: String? = null,
     val tipo: String = "",
     val descripcion: String = "",
@@ -18,15 +20,14 @@ data class Servicio(
     val updatedAt: String? = null
 )
 
-// UPDATE THIS CLASS:
+// Modelo para enviar la solicitud (POST)
 data class ServicioRequest(
     val tipo: String,
     val descripcion: String,
     val direccion: String
-    // REMOVED: val clienteId: String
 )
 
-// Estado UI para solicitud de servicio
+// Estado UI para el formulario de solicitud
 data class SolicitudServicioState(
     val tipo: String = "",
     val descripcion: String = "",
@@ -34,7 +35,7 @@ data class SolicitudServicioState(
     val isLoading: Boolean = false
 )
 
-// Errores de validación para solicitud
+// Errores de validación
 data class SolicitudServicioErrores(
     val tipoError: String? = null,
     val descripcionError: String? = null,
