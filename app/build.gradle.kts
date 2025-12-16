@@ -21,6 +21,16 @@ android {
         }
     }
 
+    signingConfigs {
+        create("release") {
+            // Buscamos el archivo en la carpeta app/
+            storeFile = file("reparafacil-key")
+            storePassword = project.findProperty("KEYSTORE_PASSWORD") as String? ?: "duoc2025"
+            keyAlias = project.findProperty("KEY_ALIAS") as String? ?: "grupo8"
+            keyPassword = project.findProperty("KEY_PASSWORD") as String? ?: "duoc2025"
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -28,8 +38,11 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("release")
         }
     }
+
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
